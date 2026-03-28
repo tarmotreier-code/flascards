@@ -594,15 +594,19 @@ function setBtns(on) {
 function markCorrect(src) {
   counts[src] = (counts[src] || 0) + 1;
   if (counts[src] >= 3) {
+    // 3x oigesti -> kerge, lahkub rasketest
     if (!easyKeys.includes(src)) easyKeys.push(src);
     hardKeys = hardKeys.filter(k => k !== src);
+    counts[src] = 3;
   }
+  // alla 3x -> jaab rasketesse kui seal oli, ei liiku
   saveAll();
   updateBadges();
 }
 
 function markWrong(src) {
   counts[src] = 0;
+  // liigub alati rasketesse, lahkub kergetest
   if (!hardKeys.includes(src)) hardKeys.push(src);
   easyKeys = easyKeys.filter(k => k !== src);
   saveAll();
