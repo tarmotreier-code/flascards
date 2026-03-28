@@ -797,11 +797,14 @@ function speak(text, langCode) {
 
 // ── STATS ──────────────────────────────────────────────────────────────────
 function updateStats() {
-  document.getElementById('statLeft').textContent  = Math.max(0, deck.length - currentIdx);
+  const remaining = Math.max(0, deck.length - currentIdx);
+  document.getElementById('statLeft').textContent  = remaining;
   document.getElementById('statKnow').textContent  = knowCount;
   document.getElementById('statDont').textContent  = dontCount;
   const pct = deck.length ? (currentIdx / deck.length * 100) : 0;
   document.getElementById('progressFill').style.width = pct + '%';
+  // update filter badges live
+  updateBadges();
 }
 
 function restartSession() { buildDeck(); }
