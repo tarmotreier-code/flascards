@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sõnakaardid</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f5f0e8; --surface:#fffdf7; --card-front:#ffffff; --card-back:#fff8ee;
+  --accent:#e8a045; --accent2:#5b8fa8; --text:#2a2318; --text-muted:#8a7d6b;
+  --border:#e2d9cc; --know:#4caf7d; --dontknow:#e05c5c;
+  --shadow:0 8px 40px rgba(42,35,24,0.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:20px 16px 60px;overflow-x:hidden;}
+
+h1{font-family:'Playfair Display',serif;font-size:1.9rem;letter-spacing:-.02em;margin-bottom:3px;}
+.subtitle{color:var(--text-muted);font-size:.88rem;margin-bottom:16px;}
+
+/* LANG SWITCH */
+.lang-switch{display:flex;gap:0;border:1.5px solid var(--border);border-radius:12px;
+  overflow:hidden;margin-bottom:14px;width:100%;max-width:480px;}
+.lang-btn{flex:1;background:none;border:none;padding:10px;font-family:'DM Sans',sans-serif;
+  font-size:.88rem;font-weight:500;color:var(--text-muted);cursor:pointer;transition:background .15s,color .15s;}
+.lang-btn.active{background:var(--accent);color:#fff;}
+
+/* FILTER TABS */
+.filter-tabs{display:flex;gap:8px;margin-bottom:16px;width:100%;max-width:480px;}
+.filter-tab{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:11px;
+  padding:9px 6px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;
+  color:var(--text-muted);cursor:pointer;transition:all .15s;text-align:center;}
+.filter-tab.active{background:var(--accent2);color:#fff;border-color:var(--accent2);}
+.filter-tab .badge{display:inline-block;background:rgba(255,255,255,.3);border-radius:20px;
+  padding:1px 7px;font-size:.74rem;margin-left:4px;}
+.filter-tab:not(.active) .badge{background:var(--border);color:var(--text-muted);}
+
+/* STATS */
+.stats-bar{display:flex;gap:14px;margin-bottom:14px;background:var(--surface);
+  border:1px solid var(--border);border-radius:14px;padding:10px 18px;
+  font-size:.84rem;color:var(--text-muted);flex-wrap:wrap;justify-content:center;
+  width:100%;max-width:480px;}
+.stats-bar span b{color:var(--text);font-weight:600;}
+
+.progress-bar{width:100%;max-width:480px;height:5px;background:var(--border);
+  border-radius:10px;margin-bottom:18px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));
+  border-radius:10px;transition:width .4s ease;}
+
+/* CARD */
+.card-area{perspective:1200px;width:100%;max-width:480px;height:250px;
+  margin-bottom:16px;cursor:pointer;user-select:none;}
+.card-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;
+  transition:transform .5s cubic-bezier(.4,0,.2,1);}
+.card-inner.flipped{transform:rotateY(180deg);}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:22px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px;box-shadow:var(--shadow);}
+.card-front{background:var(--card-front);border:1.5px solid var(--border);}
+.card-back{background:var(--card-back);border:1.5px solid var(--accent);transform:rotateY(180deg);}
+.card-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.13em;
+  color:var(--text-muted);margin-bottom:12px;font-weight:500;}
+.card-word{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;
+  color:var(--text);text-align:center;line-height:1.2;}
+.card-back .card-word{color:#7a4f1a;}
+.card-hint{font-size:.78rem;color:var(--text-muted);margin-top:12px;}
+
+/* sound btn on card */
+.card-sound{position:absolute;top:14px;right:14px;background:none;border:none;
+  font-size:1.1rem;cursor:pointer;color:var(--text-muted);padding:4px;
+  border-radius:8px;transition:color .15s,background .15s;backface-visibility:hidden;}
+.card-sound:hover{color:var(--accent2);background:rgba(91,143,168,.1);}
+
+/* countdown ring */
+.countdown-ring{position:absolute;bottom:14px;right:14px;width:28px;height:28px;display:none;}
+.countdown-ring.active{display:block;}
+.countdown-ring circle{fill:none;stroke:var(--accent);stroke-width:3;stroke-dasharray:75;
+  stroke-dashoffset:75;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;
+  transition:stroke-dashoffset 2s linear;}
+.countdown-ring.go circle{stroke-dashoffset:0;}
+
+/* voice result overlay */
+.voice-result{position:absolute;inset:0;border-radius:22px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;opacity:0;pointer-events:none;
+  transition:opacity .2s;backface-visibility:hidden;}
+.voice-result.show{opacity:1;}
+.voice-result.correct{background:rgba(76,175,125,.15);}
+.voice-result.wrong{background:rgba(224,92,92,.12);}
+.voice-result-icon{font-size:2rem;}
+.voice-result-text{font-size:.82rem;color:var(--text-muted);text-align:center;padding:0 16px;}
+
+.no-cards{width:100%;max-width:480px;height:250px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;background:var(--surface);
+  border:2px dashed var(--border);border-radius:22px;color:var(--text-muted);
+  font-size:1rem;margin-bottom:16px;text-align:center;padding:24px;gap:10px;}
+.no-cards span{font-size:2rem;}
+
+/* DONE */
+.done-screen{display:none;flex-direction:column;align-items:center;gap:12px;
+  padding:24px;text-align:center;width:100%;max-width:480px;}
+.done-screen.active{display:flex;}
+.done-icon{font-size:2.8rem;}
+.done-title{font-family:'Playfair Display',serif;font-size:1.5rem;}
+.done-sub{color:var(--text-muted);font-size:.9rem;}
+.done-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px;}
+.btn-restart{background:var(--accent);color:#fff;border:none;border-radius:12px;
+  padding:11px 22px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;
+  cursor:pointer;transition:opacity .15s;}
+.btn-restart:hover{opacity:.88;}
+.btn-practice-hard{background:#fef0f0;color:var(--dontknow);border:1.5px solid #f5c5c5;
+  border-radius:12px;padding:11px 20px;font-family:'DM Sans',sans-serif;font-size:.9rem;
+  font-weight:500;cursor:pointer;transition:opacity .15s;}
+.btn-practice-hard:disabled{opacity:.3;cursor:default;}
+
+/* MAIN BTNS */
+.btn-row{display:flex;gap:10px;margin-bottom:10px;width:100%;max-width:480px;}
+.btn{flex:1;border:none;border-radius:14px;padding:15px 8px;font-family:'DM Sans',sans-serif;
+  font-size:.93rem;font-weight:500;cursor:pointer;transition:transform .1s,opacity .15s;
+  display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn:active{transform:scale(.95);}
+.btn:disabled{opacity:.35;cursor:default;transform:none;}
+.btn-dontknow{background:#fef0f0;color:var(--dontknow);border:1.5px solid #f5c5c5;}
+.btn-know{background:#edfaf3;color:var(--know);border:1.5px solid #b6e8cc;}
+
+/* MIC + NAV ROW */
+.action-row{display:flex;gap:10px;margin-bottom:10px;width:100%;max-width:480px;}
+.btn-mic{flex:0 0 auto;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:14px;padding:13px 18px;font-size:1.1rem;cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;gap:6px;
+  font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text-muted);font-weight:500;}
+.btn-mic:hover{border-color:var(--accent2);color:var(--accent2);}
+.btn-mic.listening{background:#fef0f0;border-color:var(--dontknow);color:var(--dontknow);
+  animation:pulse .8s infinite;}
+.btn-mic:disabled{opacity:.3;cursor:default;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+
+.nav-row{display:flex;gap:10px;width:100%;max-width:480px;margin-bottom:0;}
+.btn-back{background:var(--surface);color:var(--text-muted);border:1.5px solid var(--border);
+  border-radius:14px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:.88rem;
+  font-weight:500;cursor:pointer;transition:border-color .15s,color .15s;
+  display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.btn-back:hover{border-color:var(--text-muted);color:var(--text);}
+.btn-back:disabled{opacity:.3;cursor:default;}
+.btn-open-add{flex:1;background:var(--surface);color:var(--accent2);
+  border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;
+  font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;
+  transition:border-color .15s,background .15s;display:flex;align-items:center;
+  justify-content:center;gap:6px;}
+.btn-open-add:hover{border-color:var(--accent2);background:#f0f7fb;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(42,35,24,.45);z-index:100;
+  align-items:flex-end;justify-content:center;backdrop-filter:blur(2px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:540px;
+  padding:26px 20px 40px;max-height:92vh;overflow-y:auto;
+  animation:slideUp .3s cubic-bezier(.2,.9,.4,1);}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--text);}
+.btn-close-modal{background:var(--border);border:none;border-radius:50%;width:32px;height:32px;
+  font-size:.95rem;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;
+  justify-content:center;transition:background .15s;flex-shrink:0;}
+.btn-close-modal:hover{background:#d6cbbf;}
+
+.modal-tabs{display:flex;gap:0;border:1.5px solid var(--border);border-radius:12px;
+  overflow:hidden;margin-bottom:18px;}
+.modal-tab{flex:1;background:none;border:none;padding:10px 6px;font-family:'DM Sans',sans-serif;
+  font-size:.82rem;font-weight:500;color:var(--text-muted);cursor:pointer;transition:background .15s,color .15s;}
+.modal-tab.active{background:var(--accent2);color:#fff;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+textarea{width:100%;border:1.5px solid var(--border);border-radius:12px;padding:12px 13px;
+  font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text);background:var(--bg);
+  resize:vertical;min-height:100px;outline:none;transition:border-color .18s;line-height:1.65;}
+textarea:focus{border-color:var(--accent);}
+
+/* single word input */
+.single-input-wrap{display:flex;gap:8px;margin-bottom:10px;}
+.single-input{flex:1;border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;
+  font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text);background:var(--bg);
+  outline:none;transition:border-color .18s;}
+.single-input:focus{border-color:var(--accent);}
+.btn-translate{background:var(--accent);color:#fff;border:none;border-radius:12px;
+  padding:11px 16px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;
+  cursor:pointer;white-space:nowrap;transition:opacity .15s;}
+.btn-translate:hover{opacity:.88;}
+.btn-translate:disabled{opacity:.4;cursor:default;}
+.translate-result{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;
+  padding:12px 14px;margin-bottom:12px;font-size:.88rem;display:none;}
+.translate-result.show{display:block;}
+.translate-result .tr-pair{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.translate-result .tr-src{font-weight:600;color:var(--text);}
+.translate-result .tr-arrow{color:var(--text-muted);}
+.translate-result .tr-tgt{color:var(--accent2);font-weight:500;}
+.btn-add-translated{width:100%;background:var(--accent2);color:#fff;border:none;
+  border-radius:10px;padding:10px;font-family:'DM Sans',sans-serif;font-size:.88rem;
+  font-weight:500;cursor:pointer;transition:opacity .15s;}
+.btn-add-translated:hover{opacity:.88;}
+
+.sep-info{font-size:.78rem;color:var(--text-muted);margin:7px 0 12px;}
+.sep-info code{background:var(--border);border-radius:5px;padding:1px 6px;font-size:.83em;font-family:monospace;}
+.btn-add{background:var(--accent2);color:#fff;border:none;border-radius:12px;padding:12px 22px;
+  font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;width:100%;
+  margin-bottom:0;transition:opacity .15s,transform .12s;}
+.btn-add:hover{opacity:.88;}
+.btn-add:active{transform:scale(.97);}
+
+.list-section-title{font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--text-muted);margin-bottom:10px;font-weight:500;}
+.word-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;}
+.word-item{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);
+  border-radius:10px;padding:8px 12px;font-size:.86rem;gap:8px;}
+.word-pair{display:flex;gap:7px;align-items:center;flex:1;min-width:0;}
+.word-src{font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44%;}
+.word-sep{color:var(--text-muted);font-size:.76rem;}
+.word-tgt{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44%;}
+.hard-badge{font-size:.7rem;background:#fef0f0;color:var(--dontknow);border-radius:20px;
+  padding:2px 7px;font-weight:500;flex-shrink:0;}
+.easy-badge{font-size:.7rem;background:#edfaf3;color:var(--know);border-radius:20px;
+  padding:2px 7px;font-weight:500;flex-shrink:0;}
+.btn-delete{background:none;border:none;color:#ccc;cursor:pointer;font-size:.9rem;
+  padding:2px 6px;border-radius:7px;transition:color .15s,background .15s;flex-shrink:0;margin-left:auto;}
+.btn-delete:hover{color:var(--dontknow);background:#fef0f0;}
+.empty-list{color:var(--text-muted);font-size:.86rem;text-align:center;padding:16px 0;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:#2a2318;color:#fff;padding:10px 20px;border-radius:40px;font-size:.86rem;
+  font-weight:500;pointer-events:none;transition:transform .3s ease,opacity .3s ease;
+  opacity:0;z-index:999;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* SOUND TOGGLE */
+.sound-toggle{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text-muted);
+  margin-bottom:14px;cursor:pointer;user-select:none;}
+.sound-toggle input{accent-color:var(--accent2);width:16px;height:16px;cursor:pointer;}
+
+@media(max-width:400px){
+  .card-word{font-size:1.7rem;}
+  h1{font-size:1.6rem;}
+  .btn{font-size:.84rem;padding:13px 6px;}
+  .filter-tab{font-size:.76rem;padding:8px 4px;}
+}
+</style>
+</head>
+<body>
+
+<h1>Sõnakaardid</h1>
+<p class="subtitle">Õpi uusi sõnu mängides</p>
+
+<!-- LANG SWITCH -->
+<div class="lang-switch">
+  <button class="lang-btn active" id="btnLangEN" onclick="switchLang('en')">🇬🇧 Eesti–Inglise</button>
+  <button class="lang-btn" id="btnLangRU" onclick="switchLang('ru')">🇷🇺 Eesti–Vene</button>
+</div>
+
+<!-- SOUND TOGGLE -->
+<label class="sound-toggle">
+  <input type="checkbox" id="soundToggle" checked>
+  🔊 Hääl sees
+</label>
+
+<!-- FILTER TABS -->
+<div class="filter-tabs">
+  <button class="filter-tab active" id="ftAll"  onclick="setFilter('all')">Kõik<span class="badge" id="badgeAll">0</span></button>
+  <button class="filter-tab"        id="ftEasy" onclick="setFilter('easy')">Kerged<span class="badge" id="badgeEasy">0</span></button>
+  <button class="filter-tab"        id="ftHard" onclick="setFilter('hard')">Rasked<span class="badge" id="badgeHard">0</span></button>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <span>Järel: <b id="statLeft">0</b></span>
+  <span>✓ <b id="statKnow">0</b></span>
+  <span>✗ <b id="statDont">0</b></span>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+<!-- CARD -->
+<div class="card-area" id="cardArea" onclick="cardClick()">
+  <div class="card-inner" id="cardInner">
+    <div class="card-face card-front">
+      <div class="card-label">Sõna</div>
+      <div class="card-word" id="cardFrontWord">—</div>
+      <div class="card-hint" id="cardHint">Kliki kaardil pööramiseks</div>
+      <button class="card-sound" onclick="event.stopPropagation();speakFront()" title="Kuula">🔊</button>
+    </div>
+    <div class="card-face card-back">
+      <div class="card-label">Tõlge</div>
+      <div class="card-word" id="cardBackWord">—</div>
+      <button class="card-sound" onclick="event.stopPropagation();speakBack()" title="Kuula">🔊</button>
+      <svg class="countdown-ring" id="countdownRing" viewBox="0 0 28 28">
+        <circle cx="14" cy="14" r="11"/>
+      </svg>
+      <div class="voice-result" id="voiceResult">
+        <div class="voice-result-icon" id="voiceIcon"></div>
+        <div class="voice-result-text" id="voiceText"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="no-cards" id="noCards" style="display:none">
+  <span>📚</span>
+  Lisa sõnad alustamiseks!
+</div>
+
+<div class="done-screen" id="doneScreen">
+  <div class="done-icon">🎉</div>
+  <div class="done-title">Kaardid läbi!</div>
+  <div class="done-sub" id="doneText"></div>
+  <div class="done-actions">
+    <button class="btn-restart" onclick="restartSession()">↺ Uuesti</button>
+    <button class="btn-practice-hard" id="btnPracticeHard" onclick="setFilter('hard')">✗ Õpi raskeid</button>
+  </div>
+</div>
+
+<!-- EI TEA / TEAN -->
+<div class="btn-row" id="btnRow">
+  <button class="btn btn-dontknow" id="btnDontKnow" onclick="dontKnow()">✗ Ei tea</button>
+  <button class="btn btn-know"     id="btnKnow"     onclick="know()">✓ Tean</button>
+</div>
+
+<!-- MIC -->
+<div class="action-row" id="actionRow">
+  <button class="btn-mic" id="btnMic" onclick="toggleMic()">🎤 Vasta häälega</button>
+</div>
+
+<!-- BACK + LISA -->
+<div class="nav-row" id="navRow">
+  <button class="btn-back" id="btnBack" onclick="goBack()" disabled>← Tagasi</button>
+  <button class="btn-open-add" onclick="openModal()">+ Lisa sõnad</button>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Sõnade haldus</div>
+      <button class="btn-close-modal" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchTab('single')">Üks sõna</button>
+      <button class="modal-tab" onclick="switchTab('bulk')">Nimekiri</button>
+      <button class="modal-tab" onclick="switchTab('all')">Kõik</button>
+      <button class="modal-tab" onclick="switchTab('hard')">Rasked</button>
+    </div>
+
+    <!-- SINGLE WORD + AUTO TRANSLATE -->
+    <div class="tab-panel active" id="tabSingle">
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px;">Sisesta eesti sõna — tõlgin automaatselt</p>
+      <div class="single-input-wrap">
+        <input class="single-input" id="singleInput" type="text" placeholder="nt: koer" onkeydown="if(event.key==='Enter')translateSingle()">
+        <button class="btn-translate" id="btnTranslate" onclick="translateSingle()">Tõlgi</button>
+      </div>
+      <div class="translate-result" id="translateResult">
+        <div class="tr-pair">
+          <span class="tr-src" id="trSrc"></span>
+          <span class="tr-arrow">→</span>
+          <span class="tr-tgt" id="trTgt"></span>
+        </div>
+        <button class="btn-add-translated" onclick="addTranslated()">+ Lisa kaardile</button>
+      </div>
+    </div>
+
+    <!-- BULK -->
+    <div class="tab-panel" id="tabBulk">
+      <textarea id="bulkInput" placeholder="hello - tere&#10;cat; kass&#10;dog = koer&#10;sun moon"></textarea>
+      <div class="sep-info">Eraldajad: <code>-</code> <code>;</code> <code>=</code> <code>tühik</code></div>
+      <button class="btn-add" onclick="addBulk()">+ Lisa sõnad</button>
+    </div>
+
+    <!-- ALL WORDS -->
+    <div class="tab-panel" id="tabAll">
+      <div class="list-section-title">Kõik sõnad</div>
+      <div class="word-list" id="wordListAll"></div>
+    </div>
+
+    <!-- HARD WORDS -->
+    <div class="tab-panel" id="tabHard">
+      <div class="list-section-title">Rasked sõnad</div>
+      <div class="word-list" id="wordListHard"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let lang    = 'en'; // 'en' | 'ru'
+let filter  = 'all'; // 'all' | 'easy' | 'hard'
+
+// Per-language storage
+function storageKey(k) { return `fc_${lang}_${k}`; }
+function loadWords()    { return JSON.parse(localStorage.getItem(storageKey('words')) || '[]'); }
+function loadHardKeys() { return JSON.parse(localStorage.getItem(storageKey('hard'))  || '[]'); }
+function loadEasyKeys() { return JSON.parse(localStorage.getItem(storageKey('easy'))  || '[]'); }
+// correctCounts: {src: number}
+function loadCounts()   { return JSON.parse(localStorage.getItem(storageKey('counts'))|| '{}'); }
+
+let words     = loadWords();
+let hardKeys  = loadHardKeys();
+let easyKeys  = loadEasyKeys();
+let counts    = loadCounts(); // consecutive correct count per word
+
+function saveAll() {
+  localStorage.setItem(storageKey('words'),  JSON.stringify(words));
+  localStorage.setItem(storageKey('hard'),   JSON.stringify(hardKeys));
+  localStorage.setItem(storageKey('easy'),   JSON.stringify(easyKeys));
+  localStorage.setItem(storageKey('counts'), JSON.stringify(counts));
+}
+
+// session
+let deck       = [];
+let history    = [];
+let currentIdx = 0;
+let knowCount  = 0;
+let dontCount  = 0;
+let isFlipped  = false;
+let busy       = false;
+
+// ── LANG SWITCH ────────────────────────────────────────────────────────────
+function switchLang(l) {
+  lang = l;
+  document.getElementById('btnLangEN').classList.toggle('active', l === 'en');
+  document.getElementById('btnLangRU').classList.toggle('active', l === 'ru');
+  words    = loadWords();
+  hardKeys = loadHardKeys();
+  easyKeys = loadEasyKeys();
+  counts   = loadCounts();
+  filter   = 'all';
+  setFilter('all', true);
+  updateBadges();
+}
+
+// ── FILTER ─────────────────────────────────────────────────────────────────
+function setFilter(f, skipBuild) {
+  filter = f;
+  ['all','easy','hard'].forEach(x => {
+    document.getElementById('ft'+cap(x)).classList.toggle('active', x === f);
+  });
+  if (!skipBuild) buildDeck();
+}
+
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function getDeck() {
+  if (filter === 'hard') return words.filter(w => hardKeys.includes(w.src));
+  if (filter === 'easy') return words.filter(w => easyKeys.includes(w.src));
+  return words;
+}
+
+// ── BUILD DECK ─────────────────────────────────────────────────────────────
+function buildDeck() {
+  deck       = [...getDeck()].sort(() => Math.random() - 0.5);
+  history    = [];
+  currentIdx = 0;
+  knowCount  = 0;
+  dontCount  = 0;
+  isFlipped  = false;
+  busy       = false;
+  stopCountdown();
+  updateStats();
+  updateBadges();
+  showCurrent();
+}
+
+function updateBadges() {
+  document.getElementById('badgeAll').textContent  = words.length;
+  document.getElementById('badgeEasy').textContent = easyKeys.length;
+  document.getElementById('badgeHard').textContent = hardKeys.length;
+}
+
+// ── SHOW CARD ──────────────────────────────────────────────────────────────
+function showCurrent() {
+  const ci      = document.getElementById('cardInner');
+  const area    = document.getElementById('cardArea');
+  const noCards = document.getElementById('noCards');
+  const doneSc  = document.getElementById('doneScreen');
+  const btnRow  = document.getElementById('btnRow');
+  const actRow  = document.getElementById('actionRow');
+  const navRow  = document.getElementById('navRow');
+
+  ci.classList.remove('flipped');
+  hideVoiceResult();
+  stopCountdown();
+  isFlipped = false;
+  busy      = false;
+
+  const src = getDeck();
+
+  if (!src.length) {
+    area.style.display  = 'none';
+    noCards.style.display = 'flex';
+    doneSc.classList.remove('active');
+    btnRow.style.display = 'none';
+    actRow.style.display = 'none';
+    navRow.style.display = 'flex';
+    updateBackBtn();
+    return;
+  }
+
+  if (currentIdx >= deck.length) {
+    area.style.display  = 'none';
+    noCards.style.display = 'none';
+    doneSc.classList.add('active');
+    btnRow.style.display = 'none';
+    actRow.style.display = 'none';
+    navRow.style.display = 'flex';
+    document.getElementById('doneText').textContent =
+      `Teadsid ${knowCount} / ${deck.length} sõna õigesti 🎯`;
+    document.getElementById('btnPracticeHard').disabled = hardKeys.length === 0;
+    updateBackBtn();
+    return;
+  }
+
+  area.style.display  = 'block';
+  noCards.style.display = 'none';
+  doneSc.classList.remove('active');
+  btnRow.style.display = 'flex';
+  actRow.style.display = 'flex';
+  navRow.style.display = 'flex';
+
+  const w = deck[currentIdx];
+  document.getElementById('cardFrontWord').textContent = w.src;
+  document.getElementById('cardBackWord').textContent  = w.tgt;
+  updateBackBtn();
+
+  // auto-speak front (Estonian)
+  if (soundOn()) {
+    setTimeout(() => speak(w.src, 'et-EE'), 300);
+  }
+}
+
+function updateBackBtn() {
+  document.getElementById('btnBack').disabled = history.length === 0;
+}
+
+function soundOn() { return document.getElementById('soundToggle').checked; }
+
+// ── CARD CLICK ─────────────────────────────────────────────────────────────
+function cardClick() {
+  if (busy || currentIdx >= deck.length || !deck.length) return;
+  isFlipped = !isFlipped;
+  document.getElementById('cardInner').classList.toggle('flipped', isFlipped);
+  if (isFlipped && soundOn()) {
+    setTimeout(() => speakBack(), 550);
+  }
+}
+
+function speakFront() {
+  const w = deck[currentIdx];
+  if (w) speak(w.src, 'et-EE');
+}
+
+function speakBack() {
+  const w = deck[currentIdx];
+  if (w) speak(w.tgt, lang === 'en' ? 'en-GB' : 'ru-RU');
+}
+
+// ── ANSWERS ────────────────────────────────────────────────────────────────
+function know() {
+  if (busy || currentIdx >= deck.length || !deck.length) return;
+  busy = true;
+  setBtns(false);
+  const doNext = () => {
+    markCorrect(deck[currentIdx].src);
+    history.push({ idx: currentIdx, result: 'know' });
+    knowCount++; currentIdx++;
+    updateStats(); showCurrent();
+    showToast('Tubli! ✓');
+  };
+  flipThenWait(doNext);
+}
+
+function dontKnow() {
+  if (busy || currentIdx >= deck.length || !deck.length) return;
+  busy = true;
+  setBtns(false);
+  const doNext = () => {
+    markWrong(deck[currentIdx].src);
+    history.push({ idx: currentIdx, result: 'dont' });
+    dontCount++; currentIdx++;
+    updateStats(); showCurrent();
+  };
+  flipThenWait(doNext);
+}
+
+function setBtns(on) {
+  document.getElementById('btnKnow').disabled     = !on;
+  document.getElementById('btnDontKnow').disabled = !on;
+}
+
+function markCorrect(src) {
+  counts[src] = (counts[src] || 0) + 1;
+  if (counts[src] >= 3) {
+    if (!easyKeys.includes(src)) easyKeys.push(src);
+    hardKeys = hardKeys.filter(k => k !== src);
+  }
+  saveAll();
+  updateBadges();
+}
+
+function markWrong(src) {
+  counts[src] = 0;
+  if (!hardKeys.includes(src)) hardKeys.push(src);
+  easyKeys = easyKeys.filter(k => k !== src);
+  saveAll();
+  updateBadges();
+}
+
+// flip → speak back → 2s → next
+function flipThenWait(cb) {
+  if (!isFlipped) {
+    isFlipped = true;
+    document.getElementById('cardInner').classList.add('flipped');
+    setTimeout(() => {
+      if (soundOn()) speak(deck[currentIdx]?.tgt, lang === 'en' ? 'en-GB' : 'ru-RU');
+      startCountdown(cb);
+    }, 540);
+  } else {
+    if (soundOn()) speak(deck[currentIdx]?.tgt, lang === 'en' ? 'en-GB' : 'ru-RU');
+    startCountdown(cb);
+  }
+}
+
+let countdownTimeout = null;
+function startCountdown(cb) {
+  const ring = document.getElementById('countdownRing');
+  ring.classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => ring.classList.add('go')));
+  countdownTimeout = setTimeout(() => {
+    ring.classList.remove('active','go');
+    setBtns(true);
+    cb();
+  }, 2000);
+}
+
+function stopCountdown() {
+  clearTimeout(countdownTimeout);
+  const ring = document.getElementById('countdownRing');
+  ring.classList.remove('active','go');
+  setBtns(true);
+}
+
+// ── BACK ───────────────────────────────────────────────────────────────────
+function goBack() {
+  if (!history.length || busy) return;
+  stopCountdown();
+  const prev = history.pop();
+  if (prev.result === 'know') {
+    knowCount = Math.max(0, knowCount - 1);
+    const src = deck[prev.idx].src;
+    counts[src] = Math.max(0, (counts[src] || 1) - 1);
+    if (counts[src] < 3) easyKeys = easyKeys.filter(k => k !== src);
+    saveAll();
+  }
+  if (prev.result === 'dont') {
+    dontCount = Math.max(0, dontCount - 1);
+    const src = deck[prev.idx].src;
+    counts[src] = 0;
+    hardKeys = hardKeys.filter(k => k !== src);
+    saveAll();
+  }
+  currentIdx = prev.idx;
+  updateStats();
+  updateBadges();
+  showCurrent();
+}
+
+// ── VOICE INPUT ────────────────────────────────────────────────────────────
+let recognition = null;
+let micActive   = false;
+
+function toggleMic() {
+  if (micActive) { stopMic(); return; }
+  if (currentIdx >= deck.length || !deck.length) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('Sinu brauser ei toeta mikrofoni!'); return; }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = lang === 'en' ? 'en-GB' : 'ru-RU';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 5;
+
+  recognition.onstart = () => {
+    micActive = true;
+    const btn = document.getElementById('btnMic');
+    btn.textContent = '⏹ Peata';
+    btn.classList.add('listening');
+  };
+
+  recognition.onresult = (e) => {
+    const alts = Array.from(e.results[0]).map(a => a.transcript.trim().toLowerCase());
+    const correct = deck[currentIdx].tgt.toLowerCase().trim();
+    const matched = alts.some(a => similarity(a, correct) > 0.75);
+    stopMic();
+    handleVoiceResult(matched, alts[0]);
+  };
+
+  recognition.onerror = (e) => {
+    stopMic();
+    if (e.error !== 'no-speech') showToast('Mikrofon: ' + e.error);
+  };
+
+  recognition.onend = () => { stopMic(); };
+
+  recognition.start();
+}
+
+function stopMic() {
+  micActive = false;
+  const btn = document.getElementById('btnMic');
+  btn.textContent = '🎤 Vasta häälega';
+  btn.classList.remove('listening');
+  try { recognition && recognition.stop(); } catch(e) {}
+}
+
+function handleVoiceResult(correct, heard) {
+  if (busy || currentIdx >= deck.length) return;
+  busy = true;
+  setBtns(false);
+
+  const w = deck[currentIdx];
+
+  // flip
+  if (!isFlipped) {
+    isFlipped = true;
+    document.getElementById('cardInner').classList.add('flipped');
+  }
+
+  // show result overlay
+  setTimeout(() => {
+    showVoiceResult(correct, heard, w.tgt);
+    if (soundOn()) speak(w.tgt, lang === 'en' ? 'en-GB' : 'ru-RU');
+
+    startCountdown(() => {
+      hideVoiceResult();
+      if (correct) {
+        markCorrect(w.src);
+        history.push({ idx: currentIdx, result: 'know' });
+        knowCount++;
+      } else {
+        markWrong(w.src);
+        history.push({ idx: currentIdx, result: 'dont' });
+        dontCount++;
+      }
+      currentIdx++;
+      updateStats();
+      showCurrent();
+    });
+  }, 550);
+}
+
+function showVoiceResult(correct, heard, expected) {
+  const el   = document.getElementById('voiceResult');
+  const icon = document.getElementById('voiceIcon');
+  const text = document.getElementById('voiceText');
+  el.className = 'voice-result show ' + (correct ? 'correct' : 'wrong');
+  icon.textContent = correct ? '✓' : '✗';
+  text.textContent = correct
+    ? 'Õige! Hästi tehtud!'
+    : `Sa ütlesid: "${heard}" · Õige: "${expected}"`;
+}
+
+function hideVoiceResult() {
+  document.getElementById('voiceResult').className = 'voice-result';
+}
+
+// simple similarity (levenshtein ratio)
+function similarity(a, b) {
+  if (a === b) return 1;
+  const la = a.length, lb = b.length;
+  if (!la || !lb) return 0;
+  const dp = Array.from({length: la+1}, (_,i) => Array.from({length: lb+1}, (_,j) => i||j?i&&j?0:i||j:0));
+  for (let i=1;i<=la;i++) for (let j=1;j<=lb;j++)
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return 1 - dp[la][lb] / Math.max(la,lb);
+}
+
+// ── TTS ────────────────────────────────────────────────────────────────────
+function speak(text, langCode) {
+  if (!text || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = langCode;
+  u.rate = 0.9;
+  window.speechSynthesis.speak(u);
+}
+
+// ── STATS ──────────────────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('statLeft').textContent  = Math.max(0, deck.length - currentIdx);
+  document.getElementById('statKnow').textContent  = knowCount;
+  document.getElementById('statDont').textContent  = dontCount;
+  const pct = deck.length ? (currentIdx / deck.length * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function restartSession() { buildDeck(); }
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modalTitle').textContent =
+    lang === 'en' ? 'Eesti–Inglise sõnad' : 'Eesti–Vene sõnad';
+  renderListAll(); renderListHard();
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+const tabNames = ['single','bulk','all','hard'];
+function switchTab(tab) {
+  document.querySelectorAll('.modal-tab').forEach((b,i) => b.classList.toggle('active', tabNames[i] === tab));
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', tabNames[i] === tab));
+  if (tab === 'all')  renderListAll();
+  if (tab === 'hard') renderListHard();
+  if (tab === 'single') {
+    document.getElementById('translateResult').classList.remove('show');
+    document.getElementById('singleInput').value = '';
+  }
+}
+
+// ── AUTO TRANSLATE ─────────────────────────────────────────────────────────
+let lastTranslated = null;
+
+async function translateSingle() {
+  const word = document.getElementById('singleInput').value.trim();
+  if (!word) return;
+  const btn = document.getElementById('btnTranslate');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  const targetLang = lang === 'en' ? 'inglise' : 'vene';
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: `Tõlgi järgmine eesti sõna ${targetLang} keelde. Vasta AINULT tõlgitud sõnaga, mitte midagi muud, ilma selgituseta.\n\nSõna: ${word}`
+        }]
+      })
+    });
+    const data = await resp.json();
+    const translation = data.content?.[0]?.text?.trim();
+    if (!translation) throw new Error('no result');
+
+    lastTranslated = { src: word, tgt: translation };
+    document.getElementById('trSrc').textContent = word;
+    document.getElementById('trTgt').textContent = translation;
+    document.getElementById('translateResult').classList.add('show');
+  } catch(e) {
+    showToast('Tõlge ebaõnnestus, proovi uuesti');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Tõlgi';
+}
+
+function addTranslated() {
+  if (!lastTranslated) return;
+  const { src, tgt } = lastTranslated;
+  if (!words.find(w => w.src === src && w.tgt === tgt)) {
+    words.push({ src, tgt });
+    saveAll();
+    renderListAll();
+    buildDeck();
+    showToast(`Lisatud: ${src} → ${tgt}`);
+  } else {
+    showToast('See sõna on juba olemas!');
+  }
+  document.getElementById('translateResult').classList.remove('show');
+  document.getElementById('singleInput').value = '';
+  lastTranslated = null;
+}
+
+// ── BULK ADD ───────────────────────────────────────────────────────────────
+function parsePairs(text) {
+  return text.split('\n').map(l => l.trim()).filter(Boolean).reduce((acc, line) => {
+    let sep = null;
+    if (line.includes(' - ')) sep = ' - ';
+    else if (line.includes('-')) sep = '-';
+    else if (line.includes(';')) sep = ';';
+    else if (line.includes('=')) sep = '=';
+    else if (line.includes(' ')) sep = ' ';
+    if (sep) {
+      const i = line.indexOf(sep);
+      const a = line.slice(0,i).trim(), b = line.slice(i+sep.length).trim();
+      if (a && b) acc.push({src:a, tgt:b});
+    }
+    return acc;
+  }, []);
+}
+
+function addBulk() {
+  const text = document.getElementById('bulkInput').value;
+  const pairs = parsePairs(text);
+  if (!pairs.length) { showToast('Ei leidnud sobivat formaati!'); return; }
+  let added = 0;
+  pairs.forEach(p => {
+    if (!words.find(w => w.src === p.src && w.tgt === p.tgt)) { words.push(p); added++; }
+  });
+  saveAll();
+  document.getElementById('bulkInput').value = '';
+  renderListAll();
+  buildDeck();
+  showToast(`Lisatud ${added} sõnapaari!`);
+}
+
+// ── RENDER LISTS ───────────────────────────────────────────────────────────
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderListAll() {
+  const el = document.getElementById('wordListAll');
+  if (!words.length) { el.innerHTML = '<div class="empty-list">Sõnu pole lisatud</div>'; return; }
+  el.innerHTML = words.map((w,i) => `
+    <div class="word-item">
+      <div class="word-pair">
+        <span class="word-src">${esc(w.src)}</span>
+        <span class="word-sep">→</span>
+        <span class="word-tgt">${esc(w.tgt)}</span>
+        ${easyKeys.includes(w.src) ? '<span class="easy-badge">kerge</span>' : ''}
+        ${hardKeys.includes(w.src) ? '<span class="hard-badge">raske</span>' : ''}
+      </div>
+      <button class="btn-delete" onclick="removeWord(${i})">✕</button>
+    </div>`).join('');
+}
+
+function renderListHard() {
+  const el = document.getElementById('wordListHard');
+  const hard = words.filter(w => hardKeys.includes(w.src));
+  if (!hard.length) { el.innerHTML = '<div class="empty-list">Raskeid sõnu pole</div>'; return; }
+  el.innerHTML = hard.map(w => `
+    <div class="word-item">
+      <div class="word-pair">
+        <span class="word-src">${esc(w.src)}</span>
+        <span class="word-sep">→</span>
+        <span class="word-tgt">${esc(w.tgt)}</span>
+      </div>
+      <button class="btn-delete" onclick="removeHardWord('${esc(w.src)}')">✕</button>
+    </div>`).join('');
+}
+
+function removeWord(i) {
+  const src = words[i].src;
+  words.splice(i,1);
+  hardKeys = hardKeys.filter(k => k !== src);
+  easyKeys = easyKeys.filter(k => k !== src);
+  delete counts[src];
+  saveAll(); renderListAll(); renderListHard(); updateBadges(); buildDeck();
+}
+
+function removeHardWord(src) {
+  hardKeys = hardKeys.filter(k => k !== src);
+  counts[src] = 0;
+  saveAll(); renderListAll(); renderListHard(); updateBadges();
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+updateBadges();
+buildDeck();
+</script>
+</body>
+</html>
