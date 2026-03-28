@@ -471,12 +471,6 @@ function buildDeck() {
   showCurrent();
 }
 
-function updateBadges() {
-  document.getElementById('badgeAll').textContent  = words.length;
-  document.getElementById('badgeEasy').textContent = easyKeys.length;
-  document.getElementById('badgeHard').textContent = hardKeys.length;
-}
-
 // ── SHOW CARD ──────────────────────────────────────────────────────────────
 function showCurrent() {
   const ci      = document.getElementById('cardInner');
@@ -797,14 +791,26 @@ function speak(text, langCode) {
 
 // ── STATS ──────────────────────────────────────────────────────────────────
 function updateStats() {
-  const remaining = Math.max(0, deck.length - currentIdx);
+  // Järel = sama mis aktiivne filter badge (väheneb reaalajas)
+  let remaining = Math.max(0, deck.length - currentIdx);
   document.getElementById('statLeft').textContent  = remaining;
   document.getElementById('statKnow').textContent  = knowCount;
   document.getElementById('statDont').textContent  = dontCount;
   const pct = deck.length ? (currentIdx / deck.length * 100) : 0;
   document.getElementById('progressFill').style.width = pct + '%';
-  // update filter badges live
   updateBadges();
+}
+
+function updateBadges() {
+  const neutral = words.filter(w => !hardKeys.includes(w.src) && !easyKeys.includes(w.src)).length;
+  // badge näitab järelejäänud sõnu vastavas kategoorias
+  const leftInDeck = Math.max(0, deck.length - currentIdx);
+  if (filter === 'all')  document.getElementById('badgeAll').textContent  = leftInDeck;
+  else                   document.getElementById('badgeAll').textContent  = neutral;
+  if (filter === 'easy') document.getElementById('badgeEasy').textContent = leftInDeck;
+  else                   document.getElementById('badgeEasy').textContent = easyKeys.length;
+  if (filter === 'hard') document.getElementById('badgeHard').textContent = leftInDeck;
+  else                   document.getElementById('badgeHard').textContent = hardKeys.length;
 }
 
 function restartSession() { buildDeck(); }
