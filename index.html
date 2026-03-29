@@ -526,8 +526,8 @@ function showCurrent() {
   document.getElementById('cardBackWord').textContent  = w.tgt;
   updateBackBtn();
 
-  // auto-speak front (Estonian)
-  if (soundOn()) {
+  // auto-speak front - ainult inglise režiimis
+  if (soundOn() && lang === 'en') {
     setTimeout(() => speak(w.src, 'et-EE'), 300);
   }
 }
@@ -543,19 +543,21 @@ function cardClick() {
   if (busy || currentIdx >= deck.length || !deck.length) return;
   isFlipped = !isFlipped;
   document.getElementById('cardInner').classList.toggle('flipped', isFlipped);
-  if (isFlipped && soundOn()) {
+  if (isFlipped && soundOn() && lang === 'en') {
     setTimeout(() => speakBack(), 550);
   }
 }
 
 function speakFront() {
+  if (lang !== 'en') return; // ainult inglise režiimis
   const w = deck[currentIdx];
   if (w) speak(w.src, 'et-EE');
 }
 
 function speakBack() {
+  if (lang !== 'en') return; // ainult inglise režiimis
   const w = deck[currentIdx];
-  if (w) speak(w.tgt, lang === 'en' ? 'en-GB' : 'ru-RU');
+  if (w) speak(w.tgt, 'en-GB');
 }
 
 // ── ANSWERS ────────────────────────────────────────────────────────────────
@@ -619,11 +621,11 @@ function flipThenWait(cb) {
     isFlipped = true;
     document.getElementById('cardInner').classList.add('flipped');
     setTimeout(() => {
-      if (soundOn()) speak(deck[currentIdx]?.tgt, lang === 'en' ? 'en-GB' : 'ru-RU');
+      if (soundOn() && lang === 'en') speak(deck[currentIdx]?.tgt, 'en-GB');
       startCountdown(cb);
     }, 540);
   } else {
-    if (soundOn()) speak(deck[currentIdx]?.tgt, lang === 'en' ? 'en-GB' : 'ru-RU');
+    if (soundOn() && lang === 'en') speak(deck[currentIdx]?.tgt, 'en-GB');
     startCountdown(cb);
   }
 }
@@ -737,7 +739,7 @@ function handleVoiceResult(correct, heard) {
   // show result overlay
   setTimeout(() => {
     showVoiceResult(correct, heard, w.tgt);
-    if (soundOn()) speak(w.tgt, lang === 'en' ? 'en-GB' : 'ru-RU');
+    if (soundOn() && lang === 'en') speak(w.tgt, 'en-GB');
 
     startCountdown(() => {
       hideVoiceResult();
@@ -784,13 +786,66 @@ function similarity(a, b) {
 }
 
 // ── TTS ────────────────────────────────────────────────────────────────────
+let voiceCache = {};
+
+function getBestVoice(langCode, preferFemale) {
+  if (voiceCache[langCode] !== undefined) return voiceCache[langCode];
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+
+  // Filter voices matching language
+  const langShort = langCode.split('-')[0].toLowerCase();
+  let matches = voices.filter(v => v.lang.toLowerCase().startsWith(langShort));
+  if (!matches.length) matches = voices; // fallback to any
+
+  // Try to find preferred gender by name keywords
+  const femaleKeywords = ['female','woman','girl','naine','zira','samantha','karen','moira','victoria','fiona','tessa','amelie','anna','alva','ioana','paulina','monica','lekha','veena','kanya'];
+  const maleKeywords   = ['male','man','boy','mees','daniel','alex','lee','thomas','jorge','diego','pablo','carlos','henrik','yuri','yannick','luca','oliver'];
+
+  const keywords = preferFemale ? femaleKeywords : maleKeywords;
+  let found = matches.find(v => keywords.some(k => v.name.toLowerCase().includes(k)));
+
+  // If not found by keyword, try by gender flag if available
+  if (!found) {
+    found = matches.find(v => preferFemale ? v.name.includes('f') : !v.name.toLowerCase().includes('female'));
+  }
+
+  // Fallback: just pick first match
+  const voice = found || matches[0] || null;
+  voiceCache[langCode] = voice;
+  return voice;
+}
+
 function speak(text, langCode) {
   if (!text || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = langCode;
-  u.rate = 0.9;
-  window.speechSynthesis.speak(u);
+
+  // et-EE = naine, en-GB/en-US = mees, ru-RU = mees
+  const preferFemale = langCode.startsWith('et');
+
+  const doSpeak = () => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = langCode;
+    u.rate = 1.0;     // loomulik tempo ilma pausideta
+    u.pitch = preferFemale ? 1.1 : 0.9;
+    u.volume = 1;
+
+    const voice = getBestVoice(langCode, preferFemale);
+    if (voice) u.voice = voice;
+
+    window.speechSynthesis.speak(u);
+  };
+
+  // Voices might not be loaded yet — wait if needed
+  if (window.speechSynthesis.getVoices().length === 0) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      voiceCache = {}; // reset cache
+      window.speechSynthesis.onvoiceschanged = null;
+      doSpeak();
+    };
+  } else {
+    doSpeak();
+  }
 }
 
 // ── STATS ──────────────────────────────────────────────────────────────────
