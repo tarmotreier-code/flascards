@@ -284,13 +284,10 @@ textarea:focus{border-color:var(--accent);}
 <div class="card-area" id="cardArea" onclick="cardClick()">
   <div class="card-inner" id="cardInner">
     <div class="card-face card-front">
-      <div class="card-label">Sõna</div>
       <div class="card-word" id="cardFrontWord">—</div>
-      <div class="card-hint" id="cardHint">Kliki kaardil pööramiseks</div>
       <button class="card-sound" onclick="event.stopPropagation();speakFront()" title="Kuula">🔊</button>
     </div>
     <div class="card-face card-back">
-      <div class="card-label">Tõlge</div>
       <div class="card-word" id="cardBackWord">—</div>
       <button class="card-sound" onclick="event.stopPropagation();speakBack()" title="Kuula">🔊</button>
       <svg class="countdown-ring" id="countdownRing" viewBox="0 0 28 28">
@@ -453,11 +450,25 @@ function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function getDeck() {
   if (filter === 'hard') return words.filter(w => hardKeys.includes(w.src));
   if (filter === 'easy') return words.filter(w => easyKeys.includes(w.src));
-  return words;
+  // 'all' = neutraalsed sõnad (pole kerged ega rasked)
+  return words.filter(w => !hardKeys.includes(w.src) && !easyKeys.includes(w.src));
 }
 
 // ── BUILD DECK ─────────────────────────────────────────────────────────────
 function buildDeck() {
+  // Paranda counts iga seansi alguses
+  words.forEach(w => {
+    const c = counts[w.src] || 0;
+    if (c >= 3) {
+      // count>=3 -> lisa easyKeys
+      if (!easyKeys.includes(w.src)) easyKeys.push(w.src);
+      hardKeys = hardKeys.filter(k => k !== w.src);
+      counts[w.src] = 3;
+    }
+    // Neutraalsete sõnade count SÄILIB sessioonide vahel - ei nulli!
+  });
+  saveAll();
+
   deck       = [...getDeck()].sort(() => Math.random() - 0.5);
   history    = [];
   currentIdx = 0;
@@ -481,54 +492,69 @@ function showCurrent() {
   const actRow  = document.getElementById('actionRow');
   const navRow  = document.getElementById('navRow');
 
-  ci.classList.remove('flipped');
   hideVoiceResult();
   stopCountdown();
   isFlipped = false;
   busy      = false;
 
-  const src = getDeck();
+  // Kui kaart on pööratud, pööra tagasi ja oota animatsiooni lõppu
+  const doLoad = () => {
+    const src = getDeck();
 
-  if (!src.length) {
-    area.style.display  = 'none';
-    noCards.style.display = 'flex';
-    doneSc.classList.remove('active');
-    btnRow.style.display = 'none';
-    actRow.style.display = 'none';
-    navRow.style.display = 'flex';
-    updateBackBtn();
-    return;
-  }
+    if (!src.length) {
+      area.style.display  = 'none';
+      noCards.style.display = 'flex';
+      doneSc.classList.remove('active');
+      btnRow.style.display = 'none';
+      actRow.style.display = 'none';
+      navRow.style.display = 'flex';
+      updateBackBtn();
+      return;
+    }
 
-  if (currentIdx >= deck.length) {
-    area.style.display  = 'none';
+    if (currentIdx >= deck.length) {
+      area.style.display  = 'none';
+      noCards.style.display = 'none';
+      doneSc.classList.add('active');
+      btnRow.style.display = 'none';
+      actRow.style.display = 'none';
+      navRow.style.display = 'flex';
+      document.getElementById('doneText').textContent =
+        `Teadsid ${knowCount} / ${deck.length} sõna õigesti 🎯`;
+      document.getElementById('btnPracticeHard').disabled = hardKeys.length === 0;
+      updateBackBtn();
+      return;
+    }
+
+    area.style.display  = 'block';
     noCards.style.display = 'none';
-    doneSc.classList.add('active');
-    btnRow.style.display = 'none';
-    actRow.style.display = 'none';
+    doneSc.classList.remove('active');
+    btnRow.style.display = 'flex';
+    actRow.style.display = 'flex';
     navRow.style.display = 'flex';
-    document.getElementById('doneText').textContent =
-      `Teadsid ${knowCount} / ${deck.length} sõna õigesti 🎯`;
-    document.getElementById('btnPracticeHard').disabled = hardKeys.length === 0;
+
+    const w = deck[currentIdx];
+    document.getElementById('cardFrontWord').textContent = w.src;
+    document.getElementById('cardBackWord').textContent  = '';
+    setTimeout(() => {
+      document.getElementById('cardBackWord').textContent = w.tgt;
+    }, 500);
     updateBackBtn();
-    return;
-  }
 
-  area.style.display  = 'block';
-  noCards.style.display = 'none';
-  doneSc.classList.remove('active');
-  btnRow.style.display = 'flex';
-  actRow.style.display = 'flex';
-  navRow.style.display = 'flex';
+    // auto-speak front - ainult inglise režiimis
+    if (soundOn() && lang === 'en') {
+      setTimeout(() => speak(w.src, 'et-EE'), 300);
+    }
+  };
 
-  const w = deck[currentIdx];
-  document.getElementById('cardFrontWord').textContent = w.src;
-  document.getElementById('cardBackWord').textContent  = w.tgt;
-  updateBackBtn();
-
-  // auto-speak front - ainult inglise režiimis
-  if (soundOn() && lang === 'en') {
-    setTimeout(() => speak(w.src, 'et-EE'), 300);
+  if (ci.classList.contains('flipped')) {
+    // Uuenda esikülg ENNE flipi — nähtav kohe kui kaart tagasi pöördub
+    const w = deck[currentIdx];
+    if (w) document.getElementById('cardFrontWord').textContent = w.src;
+    ci.addEventListener('transitionend', doLoad, { once: true });
+    ci.classList.remove('flipped');
+  } else {
+    doLoad();
   }
 }
 
@@ -601,8 +627,10 @@ function markCorrect(src) {
     hardKeys = hardKeys.filter(k => k !== src);
     counts[src] = 3;
   }
-  // alla 3x -> jaab rasketesse kui seal oli, ei liiku
   saveAll();
+  // Kõik+Kerged+Rasked summa = words.length kontrolli
+  const total = (words.length - hardKeys.length - easyKeys.length) + hardKeys.length + easyKeys.length;
+  if (total !== words.length) console.warn('Summa viga!', total, words.length);
   updateBadges();
 }
 
@@ -850,7 +878,15 @@ function speak(text, langCode) {
 
 // ── STATS ──────────────────────────────────────────────────────────────────
 function updateStats() {
-  const remaining = Math.max(0, deck.length - currentIdx);
+  // Järel = deck järelejäänud kaardid, aga mitte rohkem kui aktiivse filtri badge
+  const deckLeft = Math.max(0, deck.length - currentIdx);
+  const hard = hardKeys.filter(k => words.find(w => w.src === k)).length;
+  const easy = easyKeys.filter(k => words.find(w => w.src === k)).length;
+  const neutral = Math.max(0, words.length - hard - easy);
+  let remaining = deckLeft;
+  if (filter === 'easy') remaining = Math.min(deckLeft, easy);
+  if (filter === 'hard') remaining = Math.min(deckLeft, hard);
+  if (filter === 'all')  remaining = Math.min(deckLeft, neutral);
   document.getElementById('statLeft').textContent  = remaining;
   document.getElementById('statKnow').textContent  = knowCount;
   document.getElementById('statDont').textContent  = dontCount;
@@ -860,12 +896,14 @@ function updateStats() {
 }
 
 function updateBadges() {
-  // Kõik = sõnad mis pole kerged ega rasked (neutraalsed)
-  // Summa: neutraalsed + kerged + rasked = words.length alati
-  const neutral = words.filter(w => !hardKeys.includes(w.src) && !easyKeys.includes(w.src)).length;
+  // Badge'id näitavad kategooriate koguseid — ei muutu kaarte kasutades
+  // Muutuvad ainult kui sõna liigub kategooriasse (markCorrect/markWrong)
+  const hard    = hardKeys.filter(k => words.find(w => w.src === k)).length;
+  const easy    = easyKeys.filter(k => words.find(w => w.src === k)).length;
+  const neutral = Math.max(0, words.length - hard - easy);
   document.getElementById('badgeAll').textContent  = neutral;
-  document.getElementById('badgeEasy').textContent = easyKeys.length;
-  document.getElementById('badgeHard').textContent = hardKeys.length;
+  document.getElementById('badgeEasy').textContent = easy;
+  document.getElementById('badgeHard').textContent = hard;
 }
 
 function restartSession() { buildDeck(); }
