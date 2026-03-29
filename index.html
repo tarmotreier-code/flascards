@@ -795,8 +795,7 @@ function speak(text, langCode) {
 
 // ── STATS ──────────────────────────────────────────────────────────────────
 function updateStats() {
-  // Järel = sama mis aktiivne filter badge (väheneb reaalajas)
-  let remaining = Math.max(0, deck.length - currentIdx);
+  const remaining = Math.max(0, deck.length - currentIdx);
   document.getElementById('statLeft').textContent  = remaining;
   document.getElementById('statKnow').textContent  = knowCount;
   document.getElementById('statDont').textContent  = dontCount;
@@ -806,15 +805,12 @@ function updateStats() {
 }
 
 function updateBadges() {
+  // Kõik = sõnad mis pole kerged ega rasked (neutraalsed)
+  // Summa: neutraalsed + kerged + rasked = words.length alati
   const neutral = words.filter(w => !hardKeys.includes(w.src) && !easyKeys.includes(w.src)).length;
-  // badge näitab järelejäänud sõnu vastavas kategoorias
-  const leftInDeck = Math.max(0, deck.length - currentIdx);
-  if (filter === 'all')  document.getElementById('badgeAll').textContent  = leftInDeck;
-  else                   document.getElementById('badgeAll').textContent  = neutral;
-  if (filter === 'easy') document.getElementById('badgeEasy').textContent = leftInDeck;
-  else                   document.getElementById('badgeEasy').textContent = easyKeys.length;
-  if (filter === 'hard') document.getElementById('badgeHard').textContent = leftInDeck;
-  else                   document.getElementById('badgeHard').textContent = hardKeys.length;
+  document.getElementById('badgeAll').textContent  = neutral;
+  document.getElementById('badgeEasy').textContent = easyKeys.length;
+  document.getElementById('badgeHard').textContent = hardKeys.length;
 }
 
 function restartSession() { buildDeck(); }
