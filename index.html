@@ -541,10 +541,7 @@ function showCurrent() {
     }, 500);
     updateBackBtn();
 
-    // auto-speak front - ainult inglise režiimis
-    if (soundOn() && lang === 'en') {
-      setTimeout(() => speak(w.src, 'et-EE'), 300);
-    }
+    // Eesti sõna ei öelda häälega
   };
 
   if (ci.classList.contains('flipped')) {
