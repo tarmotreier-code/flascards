@@ -367,8 +367,8 @@ textarea:focus{border-color:var(--accent);}
 
     <!-- BULK -->
     <div class="tab-panel" id="tabBulk">
-      <textarea id="bulkInput" placeholder="hello - tere&#10;cat; kass&#10;dog = koer&#10;sun moon"></textarea>
-      <div class="sep-info">Eraldajad: <code>-</code> <code>;</code> <code>=</code> <code>tühik</code></div>
+      <textarea id="bulkInput" placeholder="hello - tere&#10;cat; kass&#10;dog = koer"></textarea>
+      <div class="sep-info">Eraldajad: <code>-</code> <code>;</code> <code>=</code></div>
       <button class="btn-add" onclick="addBulk()">+ Lisa sõnad</button>
     </div>
 
@@ -1001,7 +1001,7 @@ function parsePairs(text) {
     else if (line.includes('-')) sep = '-';
     else if (line.includes(';')) sep = ';';
     else if (line.includes('=')) sep = '=';
-    else if (line.includes(' ')) sep = ' ';
+
     if (sep) {
       const i = line.indexOf(sep);
       const a = line.slice(0,i).trim(), b = line.slice(i+sep.length).trim();
