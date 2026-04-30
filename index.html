@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Sõnakaardid</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#f5f0e8">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
 :root {
   --bg:#f5f0e8; --surface:#fffdf7; --card-front:#ffffff; --card-back:#fff8ee;
@@ -13,24 +14,28 @@
   --shadow:0 8px 40px rgba(42,35,24,0.13);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);
   min-height:100vh;display:flex;flex-direction:column;align-items:center;
   padding:20px 16px 60px;overflow-x:hidden;}
 
-h1{font-family:'Playfair Display',serif;font-size:1.9rem;letter-spacing:-.02em;margin-bottom:3px;}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:1.9rem;letter-spacing:-.02em;margin-bottom:3px;}
 .subtitle{color:var(--text-muted);font-size:.88rem;margin-bottom:16px;}
+.app-status{width:100%;max-width:480px;margin:-4px 0 14px;padding:10px 12px;
+  border:1.5px solid var(--border);border-radius:12px;background:rgba(255,253,247,.86);
+  color:var(--text-muted);font-size:.82rem;line-height:1.45;}
+.app-status.offline{border-color:#efc2c2;background:#fff4f4;color:#8c4b4b;}
 
 /* LANG SWITCH */
 .lang-switch{display:flex;gap:0;border:1.5px solid var(--border);border-radius:12px;
   overflow:hidden;margin-bottom:14px;width:100%;max-width:480px;}
-.lang-btn{flex:1;background:none;border:none;padding:10px;font-family:'DM Sans',sans-serif;
+.lang-btn{flex:1;background:none;border:none;padding:10px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:.88rem;font-weight:500;color:var(--text-muted);cursor:pointer;transition:background .15s,color .15s;}
 .lang-btn.active{background:var(--accent);color:#fff;}
 
 /* FILTER TABS */
 .filter-tabs{display:flex;gap:8px;margin-bottom:16px;width:100%;max-width:480px;}
 .filter-tab{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:11px;
-  padding:9px 6px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;
+  padding:9px 6px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.82rem;font-weight:500;
   color:var(--text-muted);cursor:pointer;transition:all .15s;text-align:center;}
 .filter-tab.active{background:var(--accent2);color:#fff;border-color:var(--accent2);}
 .filter-tab .badge{display:inline-block;background:rgba(255,255,255,.3);border-radius:20px;
@@ -62,7 +67,7 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;letter-spacing:-.02em;m
 .card-back{background:var(--card-back);border:1.5px solid var(--accent);transform:rotateY(180deg);}
 .card-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.13em;
   color:var(--text-muted);margin-bottom:12px;font-weight:500;}
-.card-word{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;
+.card-word{font-family:Georgia,"Times New Roman",serif;font-size:2rem;font-weight:700;
   color:var(--text);text-align:center;line-height:1.2;}
 .card-back .card-word{color:#7a4f1a;}
 .card-hint{font-size:.78rem;color:var(--text-muted);margin-top:12px;}
@@ -102,21 +107,21 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;letter-spacing:-.02em;m
   padding:24px;text-align:center;width:100%;max-width:480px;}
 .done-screen.active{display:flex;}
 .done-icon{font-size:2.8rem;}
-.done-title{font-family:'Playfair Display',serif;font-size:1.5rem;}
+.done-title{font-family:Georgia,"Times New Roman",serif;font-size:1.5rem;}
 .done-sub{color:var(--text-muted);font-size:.9rem;}
 .done-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px;}
 .btn-restart{background:var(--accent);color:#fff;border:none;border-radius:12px;
-  padding:11px 22px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;
+  padding:11px 22px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.9rem;font-weight:500;
   cursor:pointer;transition:opacity .15s;}
 .btn-restart:hover{opacity:.88;}
 .btn-practice-hard{background:#fef0f0;color:var(--dontknow);border:1.5px solid #f5c5c5;
-  border-radius:12px;padding:11px 20px;font-family:'DM Sans',sans-serif;font-size:.9rem;
+  border-radius:12px;padding:11px 20px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.9rem;
   font-weight:500;cursor:pointer;transition:opacity .15s;}
 .btn-practice-hard:disabled{opacity:.3;cursor:default;}
 
 /* MAIN BTNS */
 .btn-row{display:flex;gap:10px;margin-bottom:10px;width:100%;max-width:480px;}
-.btn{flex:1;border:none;border-radius:14px;padding:15px 8px;font-family:'DM Sans',sans-serif;
+.btn{flex:1;border:none;border-radius:14px;padding:15px 8px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:.93rem;font-weight:500;cursor:pointer;transition:transform .1s,opacity .15s;
   display:flex;align-items:center;justify-content:center;gap:6px;}
 .btn:active{transform:scale(.95);}
@@ -129,7 +134,7 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;letter-spacing:-.02em;m
 .btn-mic{flex:0 0 auto;background:var(--surface);border:1.5px solid var(--border);
   border-radius:14px;padding:13px 18px;font-size:1.1rem;cursor:pointer;
   transition:all .15s;display:flex;align-items:center;gap:6px;
-  font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text-muted);font-weight:500;}
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.88rem;color:var(--text-muted);font-weight:500;}
 .btn-mic:hover{border-color:var(--accent2);color:var(--accent2);}
 .btn-mic.listening{background:#fef0f0;border-color:var(--dontknow);color:var(--dontknow);
   animation:pulse .8s infinite;}
@@ -138,14 +143,14 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;letter-spacing:-.02em;m
 
 .nav-row{display:flex;gap:10px;width:100%;max-width:480px;margin-bottom:0;}
 .btn-back{background:var(--surface);color:var(--text-muted);border:1.5px solid var(--border);
-  border-radius:14px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:.88rem;
+  border-radius:14px;padding:12px 14px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.88rem;
   font-weight:500;cursor:pointer;transition:border-color .15s,color .15s;
   display:flex;align-items:center;gap:5px;white-space:nowrap;}
 .btn-back:hover{border-color:var(--text-muted);color:var(--text);}
 .btn-back:disabled{opacity:.3;cursor:default;}
 .btn-open-add{flex:1;background:var(--surface);color:var(--accent2);
   border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;
-  font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;
   transition:border-color .15s,background .15s;display:flex;align-items:center;
   justify-content:center;gap:6px;}
 .btn-open-add:hover{border-color:var(--accent2);background:#f0f7fb;}
@@ -159,7 +164,7 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;letter-spacing:-.02em;m
   animation:slideUp .3s cubic-bezier(.2,.9,.4,1);}
 @keyframes slideUp{from{transform:translateY(100%);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
-.modal-title{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--text);}
+.modal-title{font-family:Georgia,"Times New Roman",serif;font-size:1.2rem;color:var(--text);}
 .btn-close-modal{background:var(--border);border:none;border-radius:50%;width:32px;height:32px;
   font-size:.95rem;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;
   justify-content:center;transition:background .15s;flex-shrink:0;}
@@ -167,28 +172,29 @@ h1{font-family:'Playfair Display',serif;font-size:1.9rem;letter-spacing:-.02em;m
 
 .modal-tabs{display:flex;gap:0;border:1.5px solid var(--border);border-radius:12px;
   overflow:hidden;margin-bottom:18px;}
-.modal-tab{flex:1;background:none;border:none;padding:10px 6px;font-family:'DM Sans',sans-serif;
+.modal-tab{flex:1;background:none;border:none;padding:10px 6px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:.82rem;font-weight:500;color:var(--text-muted);cursor:pointer;transition:background .15s,color .15s;}
 .modal-tab.active{background:var(--accent2);color:#fff;}
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
 
 textarea{width:100%;border:1.5px solid var(--border);border-radius:12px;padding:12px 13px;
-  font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text);background:var(--bg);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.88rem;color:var(--text);background:var(--bg);
   resize:vertical;min-height:100px;outline:none;transition:border-color .18s;line-height:1.65;}
 textarea:focus{border-color:var(--accent);}
 
 /* single word input */
 .single-input-wrap{display:flex;gap:8px;margin-bottom:10px;}
 .single-input{flex:1;border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;
-  font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text);background:var(--bg);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.88rem;color:var(--text);background:var(--bg);
   outline:none;transition:border-color .18s;}
 .single-input:focus{border-color:var(--accent);}
 .btn-translate{background:var(--accent);color:#fff;border:none;border-radius:12px;
-  padding:11px 16px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;
+  padding:11px 16px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.85rem;font-weight:500;
   cursor:pointer;white-space:nowrap;transition:opacity .15s;}
 .btn-translate:hover{opacity:.88;}
 .btn-translate:disabled{opacity:.4;cursor:default;}
+.translate-offline-note{font-size:.78rem;color:var(--text-muted);margin:-2px 0 12px;line-height:1.45;}
 .translate-result{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;
   padding:12px 14px;margin-bottom:12px;font-size:.88rem;display:none;}
 .translate-result.show{display:block;}
@@ -197,14 +203,14 @@ textarea:focus{border-color:var(--accent);}
 .translate-result .tr-arrow{color:var(--text-muted);}
 .translate-result .tr-tgt{color:var(--accent2);font-weight:500;}
 .btn-add-translated{width:100%;background:var(--accent2);color:#fff;border:none;
-  border-radius:10px;padding:10px;font-family:'DM Sans',sans-serif;font-size:.88rem;
+  border-radius:10px;padding:10px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.88rem;
   font-weight:500;cursor:pointer;transition:opacity .15s;}
 .btn-add-translated:hover{opacity:.88;}
 
 .sep-info{font-size:.78rem;color:var(--text-muted);margin:7px 0 12px;}
 .sep-info code{background:var(--border);border-radius:5px;padding:1px 6px;font-size:.83em;font-family:monospace;}
 .btn-add{background:var(--accent2);color:#fff;border:none;border-radius:12px;padding:12px 22px;
-  font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;width:100%;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;width:100%;
   margin-bottom:0;transition:opacity .15s,transform .12s;}
 .btn-add:hover{opacity:.88;}
 .btn-add:active{transform:scale(.97);}
@@ -251,6 +257,7 @@ textarea:focus{border-color:var(--accent);}
 
 <h1>Sõnakaardid</h1>
 <p class="subtitle">Õpi uusi sõnu mängides</p>
+<div class="app-status" id="appStatus">Laadi see leht korra internetiga lahti, siis saab seda hiljem kasutada ka ilma netita.</div>
 
 <!-- LANG SWITCH -->
 <div class="lang-switch">
@@ -355,6 +362,7 @@ textarea:focus{border-color:var(--accent);}
         <input class="single-input" id="singleInput" type="text" placeholder="nt: koer" onkeydown="if(event.key==='Enter')translateSingle()">
         <button class="btn-translate" id="btnTranslate" onclick="translateSingle()">Tõlgi</button>
       </div>
+      <div class="translate-offline-note" id="translateOfflineNote">Automaatne tõlge vajab internetti. Offline'is saad siiski lisada sõnapaare nimekirjana.</div>
       <div class="translate-result" id="translateResult">
         <div class="tr-pair">
           <span class="tr-src" id="trSrc"></span>
@@ -367,8 +375,8 @@ textarea:focus{border-color:var(--accent);}
 
     <!-- BULK -->
     <div class="tab-panel" id="tabBulk">
-      <textarea id="bulkInput" placeholder="hello - tere&#10;cat; kass&#10;dog = koer"></textarea>
-      <div class="sep-info">Eraldajad: <code>-</code> <code>;</code> <code>=</code></div>
+      <textarea id="bulkInput" placeholder="koer - dog&#10;kass - cat&#10;maja - house"></textarea>
+      <div class="sep-info">Eraldaja: <code>-</code></div>
       <button class="btn-add" onclick="addBulk()">+ Lisa sõnad</button>
     </div>
 
@@ -421,6 +429,41 @@ let knowCount  = 0;
 let dontCount  = 0;
 let isFlipped  = false;
 let busy       = false;
+
+function isOnline() {
+  return navigator.onLine;
+}
+
+function updateConnectivityUI() {
+  const status = document.getElementById('appStatus');
+  const btn = document.getElementById('btnTranslate');
+  const note = document.getElementById('translateOfflineNote');
+  const online = isOnline();
+
+  if (status) {
+    status.textContent = online
+      ? 'Rakendus on online. Pärast esimest laadimist peaks see avanema ka ilma netita.'
+      : 'Oled offline. Olemasolevad kaardid töötavad edasi, aga automaattõlge vajab internetti.';
+    status.classList.toggle('offline', !online);
+  }
+
+  if (btn) btn.disabled = !online;
+
+  if (note) {
+    note.textContent = online
+      ? "Automaatne tõlge vajab internetti. Kui tahad offline'is kasutada, lisa sõnad eelnevalt või sisesta paarid nimekirjana."
+      : 'Offline-režiimis automaattõlge ei tööta. Kasuta olemasolevaid kaarte või lisa paarid nimekirjana.';
+  }
+}
+
+async function registerOfflineSupport() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    await navigator.serviceWorker.register('./sw.js');
+  } catch (err) {
+    console.warn('Service worker registration failed', err);
+  }
+}
 
 // ── LANG SWITCH ────────────────────────────────────────────────────────────
 function switchLang(l) {
@@ -941,6 +984,10 @@ let lastTranslated = null;
 async function translateSingle() {
   const word = document.getElementById('singleInput').value.trim();
   if (!word) return;
+  if (!isOnline()) {
+    showToast('Automaatne tõlge vajab internetti');
+    return;
+  }
   const btn = document.getElementById('btnTranslate');
   btn.disabled = true;
   btn.textContent = '...';
@@ -995,26 +1042,42 @@ function addTranslated() {
 
 // ── BULK ADD ───────────────────────────────────────────────────────────────
 function parsePairs(text) {
-  return text.split('\n').map(l => l.trim()).filter(Boolean).reduce((acc, line) => {
-    let sep = null;
-    if (line.includes(' - ')) sep = ' - ';
-    else if (line.includes('-')) sep = '-';
-    else if (line.includes(';')) sep = ';';
-    else if (line.includes('=')) sep = '=';
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const pairs = [];
+  const invalid = [];
 
-    if (sep) {
-      const i = line.indexOf(sep);
-      const a = line.slice(0,i).trim(), b = line.slice(i+sep.length).trim();
-      if (a && b) acc.push({src:a, tgt:b});
+  lines.forEach((line, index) => {
+    const i = line.indexOf('-');
+    if (i === -1) {
+      invalid.push(index + 1);
+      return;
     }
-    return acc;
-  }, []);
+
+    const a = line.slice(0, i).trim();
+    const b = line.slice(i + 1).trim();
+
+    if (!a || !b) {
+      invalid.push(index + 1);
+      return;
+    }
+
+    pairs.push({ src: a, tgt: b });
+  });
+
+  return { pairs, invalid };
 }
 
 function addBulk() {
   const text = document.getElementById('bulkInput').value;
-  const pairs = parsePairs(text);
-  if (!pairs.length) { showToast('Ei leidnud sobivat formaati!'); return; }
+  const { pairs, invalid } = parsePairs(text);
+  if (!pairs.length) {
+    showToast('Kasuta formaati: sõna - tõlge');
+    return;
+  }
+  if (invalid.length) {
+    showToast(`Vigane rida ${invalid[0]}: kasuta formaati sõna - tõlge`);
+    return;
+  }
   let added = 0;
   pairs.forEach(p => {
     if (!words.find(w => w.src === p.src && w.tgt === p.tgt)) { words.push(p); added++; }
@@ -1086,6 +1149,10 @@ function showToast(msg) {
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
+window.addEventListener('online', updateConnectivityUI);
+window.addEventListener('offline', updateConnectivityUI);
+registerOfflineSupport();
+updateConnectivityUI();
 updateBadges();
 buildDeck();
 </script>
