@@ -69,6 +69,7 @@ h1{font-family:Georgia,"Times New Roman",serif;font-size:1.9rem;letter-spacing:-
   color:var(--text-muted);margin-bottom:12px;font-weight:500;}
 .card-word{font-family:Georgia,"Times New Roman",serif;font-size:2rem;font-weight:700;
   color:var(--text);text-align:center;line-height:1.2;}
+.card-word.phrase{font-size:1.25rem;font-weight:600;line-height:1.45;}
 .card-back .card-word{color:#7a4f1a;}
 .card-hint{font-size:.78rem;color:var(--text-muted);margin-top:12px;}
 
@@ -349,7 +350,7 @@ textarea:focus{border-color:var(--accent);}
     </div>
 
     <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchTab('single')">Üks sõna</button>
+      <button class="modal-tab active" onclick="switchTab('single')">Sõna / lause</button>
       <button class="modal-tab" onclick="switchTab('bulk')">Nimekiri</button>
       <button class="modal-tab" onclick="switchTab('all')">Kõik</button>
       <button class="modal-tab" onclick="switchTab('hard')">Rasked</button>
@@ -357,9 +358,9 @@ textarea:focus{border-color:var(--accent);}
 
     <!-- SINGLE WORD + AUTO TRANSLATE -->
     <div class="tab-panel active" id="tabSingle">
-      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px;">Sisesta eesti sõna — tõlgin automaatselt</p>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px;">Sisesta eesti sõna või lause — tõlgin automaatselt</p>
       <div class="single-input-wrap">
-        <input class="single-input" id="singleInput" type="text" placeholder="nt: koer" onkeydown="if(event.key==='Enter')translateSingle()">
+        <input class="single-input" id="singleInput" type="text" placeholder="nt: koer  või  ma ei tea seda" onkeydown="if(event.key==='Enter')translateSingle()">
         <button class="btn-translate" id="btnTranslate" onclick="translateSingle()">Tõlgi</button>
       </div>
       <div class="translate-offline-note" id="translateOfflineNote">Automaatne tõlge vajab internetti. Offline'is saad siiski lisada sõnapaare nimekirjana.</div>
@@ -375,8 +376,8 @@ textarea:focus{border-color:var(--accent);}
 
     <!-- BULK -->
     <div class="tab-panel" id="tabBulk">
-      <textarea id="bulkInput" placeholder="koer - dog&#10;kass - cat&#10;maja - house"></textarea>
-      <div class="sep-info">Eraldaja: <code>-</code></div>
+      <textarea id="bulkInput" placeholder="koer - dog&#10;kass - cat&#10;ma ei tea - I don't know&#10;Kuidas läheb? - How are you?"></textarea>
+      <div class="sep-info">Eraldaja: <code> - </code> (tühik, kriips, tühik). Lausetes võib olla muid märke (punkt, kaldkriips jne).</div>
       <button class="btn-add" onclick="addBulk()">+ Lisa sõnad</button>
     </div>
 
@@ -577,10 +578,14 @@ function showCurrent() {
     navRow.style.display = 'flex';
 
     const w = deck[currentIdx];
-    document.getElementById('cardFrontWord').textContent = w.src;
-    document.getElementById('cardBackWord').textContent  = '';
+    const frontEl = document.getElementById('cardFrontWord');
+    const backEl  = document.getElementById('cardBackWord');
+    frontEl.textContent = w.src;
+    frontEl.classList.toggle('phrase', w.src.length > 20);
+    backEl.textContent  = '';
     setTimeout(() => {
-      document.getElementById('cardBackWord').textContent = w.tgt;
+      backEl.textContent = w.tgt;
+      backEl.classList.toggle('phrase', w.tgt.length > 20);
     }, 500);
     updateBackBtn();
 
@@ -590,7 +595,11 @@ function showCurrent() {
   if (ci.classList.contains('flipped')) {
     // Uuenda esikülg ENNE flipi — nähtav kohe kui kaart tagasi pöördub
     const w = deck[currentIdx];
-    if (w) document.getElementById('cardFrontWord').textContent = w.src;
+    if (w) {
+      const el = document.getElementById('cardFrontWord');
+      el.textContent = w.src;
+      el.classList.toggle('phrase', w.src.length > 20);
+    }
     ci.addEventListener('transitionend', doLoad, { once: true });
     ci.classList.remove('flipped');
   } else {
@@ -1003,7 +1012,7 @@ async function translateSingle() {
         max_tokens: 100,
         messages: [{
           role: 'user',
-          content: `Tõlgi järgmine eesti sõna ${targetLang} keelde. Vasta AINULT tõlgitud sõnaga, mitte midagi muud, ilma selgituseta.\n\nSõna: ${word}`
+          content: `Tõlgi järgmine eesti sõna või lause ${targetLang} keelde. Vasta AINULT tõlgitud tekstiga, mitte midagi muud, ilma selgituseta.\n\nTekst: ${word}`
         }]
       })
     });
@@ -1047,14 +1056,14 @@ function parsePairs(text) {
   const invalid = [];
 
   lines.forEach((line, index) => {
-    const i = line.indexOf('-');
-    if (i === -1) {
+    const sepIdx = line.indexOf(' - ');
+    if (sepIdx === -1) {
       invalid.push(index + 1);
       return;
     }
 
-    const a = line.slice(0, i).trim();
-    const b = line.slice(i + 1).trim();
+    const a = line.slice(0, sepIdx).trim();
+    const b = line.slice(sepIdx + 3).trim();
 
     if (!a || !b) {
       invalid.push(index + 1);
@@ -1071,11 +1080,11 @@ function addBulk() {
   const text = document.getElementById('bulkInput').value;
   const { pairs, invalid } = parsePairs(text);
   if (!pairs.length) {
-    showToast('Kasuta formaati: sõna - tõlge');
+    showToast('Kasuta formaati: tekst - tõlge  (tühikud kriipsu ümber!)');
     return;
   }
   if (invalid.length) {
-    showToast(`Vigane rida ${invalid[0]}: kasuta formaati sõna - tõlge`);
+    showToast(`Vigane rida ${invalid[0]}: kasuta  tekst - tõlge  (tühikud kriipsu ümber)`);
     return;
   }
   let added = 0;
