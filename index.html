@@ -408,18 +408,22 @@ function loadWords()    { return JSON.parse(localStorage.getItem(storageKey('wor
 function loadHardKeys() { return JSON.parse(localStorage.getItem(storageKey('hard'))  || '[]'); }
 function loadEasyKeys() { return JSON.parse(localStorage.getItem(storageKey('easy'))  || '[]'); }
 // correctCounts: {src: number}
-function loadCounts()   { return JSON.parse(localStorage.getItem(storageKey('counts'))|| '{}'); }
+function loadCounts()       { return JSON.parse(localStorage.getItem(storageKey('counts'))      || '{}'); }
+// wrongCounts: how many times answered "ei tea" while already in hardKeys
+function loadWrongCounts()  { return JSON.parse(localStorage.getItem(storageKey('wrongcounts')) || '{}'); }
 
-let words     = loadWords();
-let hardKeys  = loadHardKeys();
-let easyKeys  = loadEasyKeys();
-let counts    = loadCounts(); // consecutive correct count per word
+let words       = loadWords();
+let hardKeys    = loadHardKeys();
+let easyKeys    = loadEasyKeys();
+let counts      = loadCounts();
+let wrongCounts = loadWrongCounts();
 
 function saveAll() {
-  localStorage.setItem(storageKey('words'),  JSON.stringify(words));
-  localStorage.setItem(storageKey('hard'),   JSON.stringify(hardKeys));
-  localStorage.setItem(storageKey('easy'),   JSON.stringify(easyKeys));
-  localStorage.setItem(storageKey('counts'), JSON.stringify(counts));
+  localStorage.setItem(storageKey('words'),       JSON.stringify(words));
+  localStorage.setItem(storageKey('hard'),        JSON.stringify(hardKeys));
+  localStorage.setItem(storageKey('easy'),        JSON.stringify(easyKeys));
+  localStorage.setItem(storageKey('counts'),      JSON.stringify(counts));
+  localStorage.setItem(storageKey('wrongcounts'), JSON.stringify(wrongCounts));
 }
 
 // session
@@ -471,10 +475,11 @@ function switchLang(l) {
   lang = l;
   document.getElementById('btnLangEN').classList.toggle('active', l === 'en');
   document.getElementById('btnLangRU').classList.toggle('active', l === 'ru');
-  words    = loadWords();
-  hardKeys = loadHardKeys();
-  easyKeys = loadEasyKeys();
-  counts   = loadCounts();
+  words       = loadWords();
+  hardKeys    = loadHardKeys();
+  easyKeys    = loadEasyKeys();
+  counts      = loadCounts();
+  wrongCounts = loadWrongCounts();
   filter   = 'all';
   setFilter('all', true);
   updateBadges();
@@ -654,9 +659,13 @@ function dontKnow() {
   if (busy || currentIdx >= deck.length || !deck.length) return;
   busy = true;
   setBtns(false);
+  const src = deck[currentIdx].src;
+  const wasInHard = hardKeys.includes(src);
+  const wrongCountBefore = wrongCounts[src] || 0;
   const doNext = () => {
-    markWrong(deck[currentIdx].src);
-    history.push({ idx: currentIdx, result: 'dont' });
+    const movedToNeutral = markWrong(src);
+    if (movedToNeutral) showToast('3x ei tea — sõna läks tagasi "Kõik" alla 📚');
+    history.push({ idx: currentIdx, result: 'dont', wasInHard, wrongCountBefore });
     dontCount++; currentIdx++;
     updateStats(); showCurrent();
   };
@@ -669,27 +678,40 @@ function setBtns(on) {
 }
 
 function markCorrect(src) {
+  wrongCounts[src] = 0;
   counts[src] = (counts[src] || 0) + 1;
   if (counts[src] >= 3) {
-    // 3x oigesti -> kerge, lahkub rasketest
     if (!easyKeys.includes(src)) easyKeys.push(src);
     hardKeys = hardKeys.filter(k => k !== src);
     counts[src] = 3;
   }
   saveAll();
-  // Kõik+Kerged+Rasked summa = words.length kontrolli
-  const total = (words.length - hardKeys.length - easyKeys.length) + hardKeys.length + easyKeys.length;
-  if (total !== words.length) console.warn('Summa viga!', total, words.length);
   updateBadges();
 }
 
+// Returns true if word was moved from hard back to neutral (3x wrong in hard)
 function markWrong(src) {
   counts[src] = 0;
-  // liigub alati rasketesse, lahkub kergetest
-  if (!hardKeys.includes(src)) hardKeys.push(src);
-  easyKeys = easyKeys.filter(k => k !== src);
+  if (hardKeys.includes(src)) {
+    // Juba raskes: loenda kui palju kordi "ei tea" on vastatud
+    wrongCounts[src] = (wrongCounts[src] || 0) + 1;
+    if (wrongCounts[src] >= 3) {
+      // 3x ei tea rasketes -> tagasi kõik alla
+      hardKeys = hardKeys.filter(k => k !== src);
+      wrongCounts[src] = 0;
+      saveAll();
+      updateBadges();
+      return true;
+    }
+  } else {
+    // Pole veel raskes: lisa rasketesse, eemalda kergetest
+    hardKeys.push(src);
+    wrongCounts[src] = 1;
+    easyKeys = easyKeys.filter(k => k !== src);
+  }
   saveAll();
   updateBadges();
+  return false;
 }
 
 // flip → speak back → 2s → next
@@ -742,7 +764,15 @@ function goBack() {
     dontCount = Math.max(0, dontCount - 1);
     const src = deck[prev.idx].src;
     counts[src] = 0;
-    hardKeys = hardKeys.filter(k => k !== src);
+    if (prev.wasInHard) {
+      // Sõna oli juba raskes: taasta wrongCounts ja vajadusel lisa tagasi rasketesse
+      wrongCounts[src] = prev.wrongCountBefore;
+      if (!hardKeys.includes(src)) hardKeys.push(src);
+    } else {
+      // Sõna polnud raskes: eemalda rasketest
+      hardKeys = hardKeys.filter(k => k !== src);
+      wrongCounts[src] = 0;
+    }
     saveAll();
   }
   currentIdx = prev.idx;
@@ -825,8 +855,11 @@ function handleVoiceResult(correct, heard) {
         history.push({ idx: currentIdx, result: 'know' });
         knowCount++;
       } else {
-        markWrong(w.src);
-        history.push({ idx: currentIdx, result: 'dont' });
+        const wasInHard = hardKeys.includes(w.src);
+        const wrongCountBefore = wrongCounts[w.src] || 0;
+        const movedToNeutral = markWrong(w.src);
+        if (movedToNeutral) showToast('3x ei tea — sõna läks tagasi "Kõik" alla 📚');
+        history.push({ idx: currentIdx, result: 'dont', wasInHard, wrongCountBefore });
         dontCount++;
       }
       currentIdx++;
