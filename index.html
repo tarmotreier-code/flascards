@@ -223,8 +223,15 @@ textarea:focus{border-color:var(--accent);}
   border-radius:10px;padding:8px 12px;font-size:.86rem;gap:8px;}
 .word-pair{display:flex;gap:7px;align-items:center;flex:1;min-width:0;}
 .word-src{font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44%;}
-.word-sep{color:var(--text-muted);font-size:.76rem;}
+.word-sep{color:var(--text-muted);font-size:.76rem;flex-shrink:0;}
 .word-tgt{color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44%;}
+.word-edit{border:none;background:transparent;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:.86rem;outline:none;min-width:0;flex:1;padding:2px 4px;border-radius:5px;
+  transition:background .12s;max-width:44%;}
+.word-edit:hover{background:rgba(0,0,0,.05);}
+.word-edit:focus{background:var(--surface);outline:1.5px solid var(--accent);}
+.word-edit.src{font-weight:500;color:var(--text);}
+.word-edit.tgt{color:var(--text-muted);}
 .hard-badge{font-size:.7rem;background:#fef0f0;color:var(--dontknow);border-radius:20px;
   padding:2px 7px;font-weight:500;flex-shrink:0;}
 .easy-badge{font-size:.7rem;background:#edfaf3;color:var(--know);border-radius:20px;
@@ -358,20 +365,15 @@ textarea:focus{border-color:var(--accent);}
 
     <!-- SINGLE WORD + AUTO TRANSLATE -->
     <div class="tab-panel active" id="tabSingle">
-      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px;">Sisesta eesti sõna või lause — tõlgin automaatselt</p>
-      <div class="single-input-wrap">
-        <input class="single-input" id="singleInput" type="text" placeholder="nt: koer  või  ma ei tea seda" onkeydown="if(event.key==='Enter')translateSingle()">
+      <div class="single-input-wrap" style="margin-bottom:8px;">
+        <input class="single-input" id="singleInput" type="text" placeholder="Eesti sõna või lause" oninput="singleInputChanged()" onkeydown="if(event.key==='Enter')document.getElementById('singleTgt').focus()">
         <button class="btn-translate" id="btnTranslate" onclick="translateSingle()">Tõlgi</button>
       </div>
-      <div class="translate-offline-note" id="translateOfflineNote">Automaatne tõlge vajab internetti. Offline'is saad siiski lisada sõnapaare nimekirjana.</div>
-      <div class="translate-result" id="translateResult">
-        <div class="tr-pair">
-          <span class="tr-src" id="trSrc"></span>
-          <span class="tr-arrow">→</span>
-          <span class="tr-tgt" id="trTgt"></span>
-        </div>
-        <button class="btn-add-translated" onclick="addTranslated()">+ Lisa kaardile</button>
+      <div class="single-input-wrap">
+        <input class="single-input" id="singleTgt" type="text" placeholder="Tõlge" oninput="singleInputChanged()" onkeydown="if(event.key==='Enter')addSingleManual()">
       </div>
+      <div class="translate-offline-note" id="translateOfflineNote" style="margin-bottom:10px;"></div>
+      <button class="btn-add" id="btnAddSingle" onclick="addSingleManual()" disabled>+ Lisa kaardile</button>
     </div>
 
     <!-- BULK -->
@@ -456,8 +458,8 @@ function updateConnectivityUI() {
 
   if (note) {
     note.textContent = online
-      ? "Automaatne tõlge vajab internetti. Kui tahad offline'is kasutada, lisa sõnad eelnevalt või sisesta paarid nimekirjana."
-      : 'Offline-režiimis automaattõlge ei tööta. Kasuta olemasolevaid kaarte või lisa paarid nimekirjana.';
+      ? ''
+      : 'Offline — automaattõlge ei tööta, sisesta tõlge käsitsi.';
   }
 }
 
@@ -1015,17 +1017,41 @@ function switchTab(tab) {
   if (tab === 'all')  renderListAll();
   if (tab === 'hard') renderListHard();
   if (tab === 'single') {
-    document.getElementById('translateResult').classList.remove('show');
     document.getElementById('singleInput').value = '';
+    document.getElementById('singleTgt').value = '';
+    document.getElementById('btnAddSingle').disabled = true;
   }
 }
 
-// ── AUTO TRANSLATE ─────────────────────────────────────────────────────────
-let lastTranslated = null;
+// ── SINGLE ADD ─────────────────────────────────────────────────────────────
+function singleInputChanged() {
+  const src = document.getElementById('singleInput').value.trim();
+  const tgt = document.getElementById('singleTgt').value.trim();
+  document.getElementById('btnAddSingle').disabled = !(src && tgt);
+}
+
+function addSingleManual() {
+  const src = document.getElementById('singleInput').value.trim();
+  const tgt = document.getElementById('singleTgt').value.trim();
+  if (!src || !tgt) return;
+  if (!words.find(w => w.src === src && w.tgt === tgt)) {
+    words.push({ src, tgt });
+    saveAll();
+    renderListAll();
+    buildDeck();
+    showToast(`Lisatud: ${src} → ${tgt}`);
+  } else {
+    showToast('See paar on juba olemas!');
+  }
+  document.getElementById('singleInput').value = '';
+  document.getElementById('singleTgt').value = '';
+  document.getElementById('btnAddSingle').disabled = true;
+  document.getElementById('singleInput').focus();
+}
 
 async function translateSingle() {
   const word = document.getElementById('singleInput').value.trim();
-  if (!word) return;
+  if (!word) { showToast('Sisesta eesti sõna või lause'); return; }
   if (!isOnline()) {
     showToast('Automaatne tõlge vajab internetti');
     return;
@@ -1037,49 +1063,21 @@ async function translateSingle() {
   const targetLang = lang === 'en' ? 'inglise' : 'vene';
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 100,
-        messages: [{
-          role: 'user',
-          content: `Tõlgi järgmine eesti sõna või lause ${targetLang} keelde. Vasta AINULT tõlgitud tekstiga, mitte midagi muud, ilma selgituseta.\n\nTekst: ${word}`
-        }]
-      })
-    });
+    const resp = await fetch('https://api.mymemory.translated.net/get?' + new URLSearchParams({
+      q: word,
+      langpair: `et|${lang === 'en' ? 'en' : 'ru'}`,
+    }));
     const data = await resp.json();
-    const translation = data.content?.[0]?.text?.trim();
-    if (!translation) throw new Error('no result');
-
-    lastTranslated = { src: word, tgt: translation };
-    document.getElementById('trSrc').textContent = word;
-    document.getElementById('trTgt').textContent = translation;
-    document.getElementById('translateResult').classList.add('show');
+    const translation = data?.responseData?.translatedText?.trim();
+    if (!translation || translation.toLowerCase() === word.toLowerCase()) throw new Error('no result');
+    document.getElementById('singleTgt').value = translation;
+    singleInputChanged();
   } catch(e) {
-    showToast('Tõlge ebaõnnestus, proovi uuesti');
+    showToast('Automaattõlge ebaõnnestus — sisesta tõlge käsitsi');
   }
 
-  btn.disabled = false;
+  btn.disabled = !isOnline();
   btn.textContent = 'Tõlgi';
-}
-
-function addTranslated() {
-  if (!lastTranslated) return;
-  const { src, tgt } = lastTranslated;
-  if (!words.find(w => w.src === src && w.tgt === tgt)) {
-    words.push({ src, tgt });
-    saveAll();
-    renderListAll();
-    buildDeck();
-    showToast(`Lisatud: ${src} → ${tgt}`);
-  } else {
-    showToast('See sõna on juba olemas!');
-  }
-  document.getElementById('translateResult').classList.remove('show');
-  document.getElementById('singleInput').value = '';
-  lastTranslated = null;
 }
 
 // ── BULK ADD ───────────────────────────────────────────────────────────────
@@ -1140,14 +1138,37 @@ function renderListAll() {
   el.innerHTML = words.map((w,i) => `
     <div class="word-item">
       <div class="word-pair">
-        <span class="word-src">${esc(w.src)}</span>
+        <input class="word-edit src" value="${esc(w.src)}" data-i="${i}" data-field="src"
+          onblur="saveWordEdit(this)" onkeydown="if(event.key==='Enter')this.nextElementSibling.nextElementSibling.focus()">
         <span class="word-sep">→</span>
-        <span class="word-tgt">${esc(w.tgt)}</span>
+        <input class="word-edit tgt" value="${esc(w.tgt)}" data-i="${i}" data-field="tgt"
+          onblur="saveWordEdit(this)" onkeydown="if(event.key==='Enter')this.blur()">
         ${easyKeys.includes(w.src) ? '<span class="easy-badge">kerge</span>' : ''}
         ${hardKeys.includes(w.src) ? '<span class="hard-badge">raske</span>' : ''}
       </div>
       <button class="btn-delete" onclick="removeWord(${i})">✕</button>
     </div>`).join('');
+}
+
+function saveWordEdit(input) {
+  const i = +input.dataset.i;
+  const field = input.dataset.field;
+  const newVal = input.value.trim();
+  if (!newVal) { input.value = words[i][field]; return; }
+  if (newVal === words[i][field]) return;
+
+  const oldSrc = words[i].src;
+  words[i][field] = newVal;
+
+  if (field === 'src' && newVal !== oldSrc) {
+    if (hardKeys.includes(oldSrc)) { hardKeys = hardKeys.map(k => k === oldSrc ? newVal : k); }
+    if (easyKeys.includes(oldSrc)) { easyKeys = easyKeys.map(k => k === oldSrc ? newVal : k); }
+    if (counts[oldSrc] !== undefined) { counts[newVal] = counts[oldSrc]; delete counts[oldSrc]; }
+  }
+
+  saveAll();
+  updateBadges();
+  buildDeck();
 }
 
 function renderListHard() {
