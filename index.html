@@ -196,6 +196,11 @@ textarea:focus{border-color:var(--accent);}
 .btn-translate:hover{opacity:.88;}
 .btn-translate:disabled{opacity:.4;cursor:default;}
 .translate-offline-note{font-size:.78rem;color:var(--text-muted);margin:-2px 0 12px;line-height:1.45;}
+.btn-swap-dir{background:none;border:none;color:var(--accent2);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:.8rem;font-weight:500;cursor:pointer;padding:4px 10px;border-radius:8px;
+  transition:background .13s;display:block;margin:2px auto 6px;}
+.btn-swap-dir:hover{background:rgba(91,143,168,.12);}
+.single-lang-label{font-size:.74rem;color:var(--text-muted);font-weight:500;margin-bottom:4px;display:block;}
 .translate-result{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;
   padding:12px 14px;margin-bottom:12px;font-size:.88rem;display:none;}
 .translate-result.show{display:block;}
@@ -365,14 +370,17 @@ textarea:focus{border-color:var(--accent);}
 
     <!-- SINGLE WORD + AUTO TRANSLATE -->
     <div class="tab-panel active" id="tabSingle">
-      <div class="single-input-wrap" style="margin-bottom:8px;">
+      <span class="single-lang-label" id="labelTop">🇪🇪 Eesti</span>
+      <div class="single-input-wrap" style="margin-bottom:0;">
         <input class="single-input" id="singleInput" type="text" placeholder="Eesti sõna või lause" oninput="singleInputChanged()" onkeydown="if(event.key==='Enter')document.getElementById('singleTgt').focus()">
         <button class="btn-translate" id="btnTranslate" onclick="translateSingle()">Tõlgi</button>
       </div>
+      <button class="btn-swap-dir" onclick="swapSingleDir()">⇄ vaheta suund</button>
+      <span class="single-lang-label" id="labelBot">🇬🇧 Inglise</span>
       <div class="single-input-wrap">
         <input class="single-input" id="singleTgt" type="text" placeholder="Tõlge" oninput="singleInputChanged()" onkeydown="if(event.key==='Enter')addSingleManual()">
       </div>
-      <div class="translate-offline-note" id="translateOfflineNote" style="margin-bottom:10px;"></div>
+      <div class="translate-offline-note" id="translateOfflineNote" style="margin:6px 0 10px;"></div>
       <button class="btn-add" id="btnAddSingle" onclick="addSingleManual()" disabled>+ Lisa kaardile</button>
     </div>
 
@@ -485,6 +493,8 @@ function switchLang(l) {
   filter   = 'all';
   setFilter('all', true);
   updateBadges();
+  singleDir = 'et';
+  updateSingleDirUI();
 }
 
 // ── FILTER ─────────────────────────────────────────────────────────────────
@@ -1020,20 +1030,45 @@ function switchTab(tab) {
     document.getElementById('singleInput').value = '';
     document.getElementById('singleTgt').value = '';
     document.getElementById('btnAddSingle').disabled = true;
+    singleDir = 'et';
+    updateSingleDirUI();
   }
 }
 
 // ── SINGLE ADD ─────────────────────────────────────────────────────────────
+let singleDir = 'et'; // 'et' = top is Estonian; 'foreign' = top is foreign lang
+
+function updateSingleDirUI() {
+  const tgtName = lang === 'en' ? 'Inglise' : 'Vene';
+  const tgtFlag = lang === 'en' ? '🇬🇧' : '🇷🇺';
+  const isEtTop = singleDir === 'et';
+  document.getElementById('labelTop').textContent = isEtTop ? '🇪🇪 Eesti' : `${tgtFlag} ${tgtName}`;
+  document.getElementById('labelBot').textContent = isEtTop ? `${tgtFlag} ${tgtName}` : '🇪🇪 Eesti';
+  document.getElementById('singleInput').placeholder = isEtTop ? 'Eesti sõna või lause' : `${tgtName} sõna või lause`;
+  document.getElementById('singleTgt').placeholder   = isEtTop ? `${tgtName} tõlge` : 'Eesti tõlge';
+}
+
+function swapSingleDir() {
+  const a = document.getElementById('singleInput');
+  const b = document.getElementById('singleTgt');
+  const tmp = a.value; a.value = b.value; b.value = tmp;
+  singleDir = singleDir === 'et' ? 'foreign' : 'et';
+  updateSingleDirUI();
+  singleInputChanged();
+}
+
 function singleInputChanged() {
-  const src = document.getElementById('singleInput').value.trim();
-  const tgt = document.getElementById('singleTgt').value.trim();
-  document.getElementById('btnAddSingle').disabled = !(src && tgt);
+  const top = document.getElementById('singleInput').value.trim();
+  const bot = document.getElementById('singleTgt').value.trim();
+  document.getElementById('btnAddSingle').disabled = !(top && bot);
 }
 
 function addSingleManual() {
-  const src = document.getElementById('singleInput').value.trim();
-  const tgt = document.getElementById('singleTgt').value.trim();
-  if (!src || !tgt) return;
+  const topVal = document.getElementById('singleInput').value.trim();
+  const botVal = document.getElementById('singleTgt').value.trim();
+  if (!topVal || !botVal) return;
+  const src = singleDir === 'et' ? topVal : botVal;
+  const tgt = singleDir === 'et' ? botVal : topVal;
   if (!words.find(w => w.src === src && w.tgt === tgt)) {
     words.push({ src, tgt });
     saveAll();
@@ -1051,22 +1086,17 @@ function addSingleManual() {
 
 async function translateSingle() {
   const word = document.getElementById('singleInput').value.trim();
-  if (!word) { showToast('Sisesta eesti sõna või lause'); return; }
-  if (!isOnline()) {
-    showToast('Automaatne tõlge vajab internetti');
-    return;
-  }
+  if (!word) { showToast('Sisesta sõna või lause'); return; }
+  if (!isOnline()) { showToast('Automaatne tõlge vajab internetti'); return; }
   const btn = document.getElementById('btnTranslate');
   btn.disabled = true;
   btn.textContent = '...';
 
-  const targetLang = lang === 'en' ? 'inglise' : 'vene';
+  const foreignCode = lang === 'en' ? 'en' : 'ru';
+  const langpair = singleDir === 'et' ? `et|${foreignCode}` : `${foreignCode}|et`;
 
   try {
-    const resp = await fetch('https://api.mymemory.translated.net/get?' + new URLSearchParams({
-      q: word,
-      langpair: `et|${lang === 'en' ? 'en' : 'ru'}`,
-    }));
+    const resp = await fetch('https://api.mymemory.translated.net/get?' + new URLSearchParams({ q: word, langpair }));
     const data = await resp.json();
     const translation = data?.responseData?.translatedText?.trim();
     if (!translation || translation.toLowerCase() === word.toLowerCase()) throw new Error('no result');
